@@ -1,4 +1,4 @@
-# stress analysis
+# Stress analysis
 
 import pandas as pd
 import numpy as np
