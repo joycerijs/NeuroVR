@@ -5,10 +5,23 @@ import numpy as np
 from bisect import bisect_left
 
 
+def preprocessing(dataframe):
+    # Voor nu: vervangen rotatiematrices en confidance columns verwijderen.
+
+    # Replace rotation columns of dataframe to center values around 360 or 0. Voor nu alleen de rotatie van de rechterhand toegevoegd.
+    df2 = dataframe.assign(HeadRotation_X=np.unwrap(dataframe['HeadRotation_X'], period=360), HeadRotation_Y=np.unwrap(dataframe['HeadRotation_Y'], period=360), HeadRotation_Z=np.unwrap(dataframe['HeadRotation_Z'], period=360),
+                           EyeRotationLeft_X=np.unwrap(dataframe['EyeRotationLeft_X'], period=360), EyeRotationLeft_Y=np.unwrap(dataframe['EyeRotationLeft_Y'], period=360),
+                           EyeRotationRight_X=np.unwrap(dataframe['EyeRotationRight_X'], period=360), EyeRotationRight_Y=np.unwrap(dataframe['EyeRotationRight_Y'], period=360),
+                           HandRotationRight_X=np.unwrap(dataframe['HandRotationRight_X'], period=360), HandRotationRight_Y=np.unwrap(dataframe['HandRotationRight_Y'], period=360), HandRotationRight_Z=np.unwrap(dataframe['HandRotationRight_Z'], period=360))
+
+    # Remove columns that contain 'confidance'
+    preprocessed_dataframe = df2[df2.columns.drop(list(df2.filter(regex='Confidance')))]
+    return preprocessed_dataframe
+
+
 def take_closest(myList, myNumber):
     """
     Assumes myList is sorted. Returns closest value to myNumber.
-
     If two numbers are equally close, return the smallest number.
     """
     pos = bisect_left(myList, myNumber)
@@ -47,34 +60,26 @@ def cut_dataframe(dataframe, person, duration_piece=10):
                 break
     # Find indices of times
     for j in range(len(times)):
-        ind = int(df2[df2['Time'] == times[j]].index.values)
+        ind = int(dataframe[dataframe['Time'] == times[j]].index.values)
         indices.append(ind)
     # Create a dict of the dataframes of the different pieces
     for i in range(len(indices)-1):
-        d[f"dataframe{person}_{i}"] = df2.loc[indices[i]:indices[i+1]-1, :]
+        d[f"dataframe{person}_{i}"] = dataframe.loc[indices[i]:indices[i+1]-1, :]
     return d
 
 
-path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Testset.csv'
+path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Testset_nieuw.csv'
 df = pd.read_table(path, delimiter=";", dtype=np.float64)
-# # print(df['Time'])
 
 # Remove last rows where time = zero and for now; remove the rows where head position is 0
 dataframe_ = df[df.Time != 0.00000]
 dataframe = dataframe_[dataframe_.HeadPosition_X != 0.00000]
 
 # print(dataframe['HeadRotation_X'].head())
-
-# # Add columns to dataframe that center values around 360 or 0
-df2 = dataframe.assign(HeadRotation_X_unwrap=np.unwrap(dataframe['HeadRotation_X'], period=360), HeadRotation_Y_unwrap=np.unwrap(dataframe['HeadRotation_Y'], period=360), HeadRotation_Z_unwrap=np.unwrap(dataframe['HeadRotation_Z'], period=360))
-
-# # Data in korte stukjes knippen
-# # Vind de tijd x sec verder van vorige laatste index. loopje maken; wanneer eindigt het? als er niet meer de helft van duration_piece beschikbaar is. 
-# index = []
+df3 = preprocessing(dataframe)
 
 # Dataframes van de verschillende stukjes maken
-d = cut_dataframe(df2, 1)
-print(d)
+d = cut_dataframe(df3, 1)
 
 # # Calculate standard deviations of positions x, y, z and rotation x, y and z
 # # print(np.std(df2['HeadPosition_X']))
@@ -84,4 +89,3 @@ print(d)
 # # print(np.std(df2['HeadRotation_X_unwrap']))
 # # print(np.std(df2['HeadRotation_Y_unwrap']))
 # # print(np.std(df2['HeadRotation_Z_unwrap']))
-
