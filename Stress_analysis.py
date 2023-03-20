@@ -12,6 +12,8 @@ def take_closest(myList, myNumber):
     If two numbers are equally close, return the smallest number.
     """
     pos = bisect_left(myList, myNumber)
+    print('this is pos')
+    print(pos)
     if pos == 0:
         return myList[0]
     if pos == len(myList):
@@ -24,7 +26,7 @@ def take_closest(myList, myNumber):
         return before
 
 
-path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Testset.csv'
+path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Testset_nieuw.csv'
 df = pd.read_table(path, delimiter=";")
 # print(df['Time'])
 
@@ -42,23 +44,33 @@ df2 = dataframe.assign(HeadRotation_X_unwrap=np.unwrap(dataframe['HeadRotation_X
 index = []
 time = []
 
+
 for i in range(10):
-    duration_piece = 15
+    duration_piece = 10
 
     if not index:
         time.append(take_closest(list(df2['Time']), df2['Time'][0]+duration_piece))
-        index.append(dataframe[dataframe['Time'] == time[i]].index.values)
+# vgm had ik index alleen om de index bij de bijpassende tijd te vinden. is dit wel nodig? het lukt nog niet :(
+        index = df2['Time'].get_loc(time[i]) 
+        # index = int(((df2.index[df2['Time'] == time[i]])))
+        # index.append(df2[df2['Time'] == time[i]].index.values)
+        print(index)
 
     else:
-        time.append(take_closest(list(df2['Time']), df2['Time'][index[-1]]+duration_piece))
-        index.append(dataframe[dataframe['Time'] == time[i]].index.values)
+        time.append(take_closest(list(df2['Time']), df2['Time'][index]+duration_piece))
+        # time.append(bisect_left(list(df2['Time']), df2['Time'][int(index[-1])]+duration_piece))
+        # index.append(df2[df2['Time'] == time[i]].index.values)
+        # index.append((df2.index[df2['Time'] == time[i]]))
 
-    if time[i] < 0.5*duration_piece*time[i-1]:
-        break
+    # if time[i] < 0.5*duration_piece*time[i-1]:
+    #     print('yes')
+    #     break
 
 print('end loop')
 print(time)
 
+# indexx = [20, 40, 50, 60]
+# print(df2['Time'][indexx[-1]])
 
 
 # Calculate standard deviations of positions x, y, z and rotation x, y and z
