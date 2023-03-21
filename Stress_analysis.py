@@ -68,7 +68,19 @@ def cut_dataframe(dataframe, person, duration_piece=10):
     return d
 
 
-path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Testset_nieuw.csv'
+def euclidean(dataframe, parameters):
+    # For head position and hand position
+    distances = []
+    for i in range(len(dataframe['Time'])-1):
+        a = np.array([dataframe[parameters[0]][i], dataframe[parameters[1]][i], dataframe[parameters[2]][i]])
+        b = np.array([dataframe[parameters[0]][i+1], dataframe[parameters[1]][i+1], dataframe[parameters[2]][i+1]])
+        dist = np.linalg.norm(a-b)
+        distances.append(dist)
+        # geeft nog een error
+    return distances
+
+
+path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Testset.csv'
 df = pd.read_table(path, delimiter=";", dtype=np.float64)
 
 # Remove last rows where time = zero and for now; remove the rows where head position is 0
@@ -80,6 +92,11 @@ df3 = preprocessing(dataframe)
 
 # Dataframes van de verschillende stukjes maken
 d = cut_dataframe(df3, 1)
+
+# Euclidean distance berekenen voor posities x, y en z
+distances = euclidean(df3, ['HeadPosition_X', 'HeadPosition_Y', 'HeadPosition_Z'])
+print(distances)
+
 
 # # Calculate standard deviations of positions x, y, z and rotation x, y and z
 # # print(np.std(df2['HeadPosition_X']))
