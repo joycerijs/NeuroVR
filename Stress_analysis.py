@@ -94,9 +94,6 @@ df = pd.read_table(path, delimiter=";", dtype=np.float64)
 dataframe_ = df[df.Time != 0.00000]
 dataframe = dataframe_[dataframe_.HeadPosition_X != 0.00000]
 
-# Loop voor rotations
-rotations = ['HeadRotation_X', 'HeadRotation_Y', 'HeadRotation_Z', 'EyeRotationLeft_X', 'EyeRotationLeft_Y', 'EyeRotationRight_X', 'EyeRotationRight_Y', 'HandRotationRight_X', 'HandRotationRight_Y', 'HandRotationRight_Z']
-
 # print(dataframe['HeadRotation_X'].head())
 df3 = preprocessing(dataframe, rotations)
 print(df3['HeadRotation_Y'])
@@ -107,6 +104,9 @@ d = cut_dataframe(df3, 1, 15)
 
 # Loop voor positions
 positions = ['HeadPosition_X', 'HeadPosition_Y', 'HeadPosition_Z', 'HandPositionRight_X', 'HandPositionRight_Y', 'HandPositionRight_Z']
+
+# Loop voor rotations
+rotations = ['HeadRotation_X', 'HeadRotation_Y', 'HeadRotation_Z', 'EyeRotationLeft_X', 'EyeRotationLeft_Y', 'EyeRotationRight_X', 'EyeRotationRight_Y', 'HandRotationRight_X', 'HandRotationRight_Y', 'HandRotationRight_Z']
 
 dict_sum = defaultdict(list)
 
