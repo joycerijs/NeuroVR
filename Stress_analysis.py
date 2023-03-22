@@ -11,6 +11,9 @@ def preprocessing(dataframe):
     # Voor nu: vervangen rotatiematrices en confidance columns verwijderen.
 
     # Replace rotation columns of dataframe to center values around 360 or 0. Voor nu alleen de rotatie van de rechterhand toegevoegd.
+    # Het lukt nog niet om met een loopje de dataframe te wijzigen omdat hij telkens opnieuw gedefinieerd wordt. later nog naar kijken
+    # for key in rotations:
+    #     df2 = dataframe.assign(key=np.unwrap(dataframe[key], period=360))
     df2 = dataframe.assign(HeadRotation_X=np.unwrap(dataframe['HeadRotation_X'], period=360), HeadRotation_Y=np.unwrap(dataframe['HeadRotation_Y'], period=360), HeadRotation_Z=np.unwrap(dataframe['HeadRotation_Z'], period=360),
                            EyeRotationLeft_X=np.unwrap(dataframe['EyeRotationLeft_X'], period=360), EyeRotationLeft_Y=np.unwrap(dataframe['EyeRotationLeft_Y'], period=360),
                            EyeRotationRight_X=np.unwrap(dataframe['EyeRotationRight_X'], period=360), EyeRotationRight_Y=np.unwrap(dataframe['EyeRotationRight_Y'], period=360),
@@ -18,6 +21,7 @@ def preprocessing(dataframe):
 
     # Remove columns that contain 'confidance'
     preprocessed_dataframe = df2[df2.columns.drop(list(df2.filter(regex='Confidance')))]
+    # preprocessed_dataframe = dataframe[dataframe.columns.drop(list(dataframe.filter(regex='Confidance')))]
     return preprocessed_dataframe
 
 
@@ -67,7 +71,7 @@ def cut_dataframe(dataframe, person, duration_piece=10):
     return d
 
 
-def euclidean(df, parameters):
+def euclidean_speed(df, parameters):
     # For head position and hand position
     distances = []
     time_steps = []
@@ -90,8 +94,12 @@ df = pd.read_table(path, delimiter=";", dtype=np.float64)
 dataframe_ = df[df.Time != 0.00000]
 dataframe = dataframe_[dataframe_.HeadPosition_X != 0.00000]
 
+# Loop voor rotations
+rotations = ['HeadRotation_X', 'HeadRotation_Y', 'HeadRotation_Z', 'EyeRotationLeft_X', 'EyeRotationLeft_Y', 'EyeRotationRight_X', 'EyeRotationRight_Y', 'HandRotationRight_X', 'HandRotationRight_Y', 'HandRotationRight_Z']
+
 # print(dataframe['HeadRotation_X'].head())
-df3 = preprocessing(dataframe)
+df3 = preprocessing(dataframe, rotations)
+print(df3['HeadRotation_Y'])
 
 # Dataframes van de verschillende stukjes maken
 d = cut_dataframe(df3, 1, 15)
@@ -99,18 +107,20 @@ d = cut_dataframe(df3, 1, 15)
 
 # Loop voor positions
 positions = ['HeadPosition_X', 'HeadPosition_Y', 'HeadPosition_Z', 'HandPositionRight_X', 'HandPositionRight_Y', 'HandPositionRight_Z']
+
 dict_sum = defaultdict(list)
 
 for i in list(d.keys()):
     for j in range(len(positions)):
-        speeds_head = euclidean(d[i], [positions[0], positions[1], positions[2]])
-        speeds_hand = euclidean(d[i], [positions[3], positions[4], positions[5]])
         dict_sum[f"std_{positions[j]}"].append(np.std(d[i][positions[j]]))
+    speeds_head = euclidean_speed(d[i], [positions[0], positions[1], positions[2]])
+    speeds_hand = euclidean_speed(d[i], [positions[3], positions[4], positions[5]])
     dict_sum["mean_speed_HeadPosition"].append(mean(speeds_head))
     dict_sum["mean_speed_HandPosition"].append(mean(speeds_hand))
 
-df_sum = pd.DataFrame(data=dict_sum) #Deze aan het einde, na het berekenen van alle features
-print(df_sum)
+
+df_sum = pd.DataFrame(data=dict_sum)  # Deze aan het einde, na het berekenen van alle features
+# print(df_sum)
 
 # # Calculate standard deviations of positions x, y, z and rotation x, y and z
 # # print(np.std(df2['HeadPosition_X']))
