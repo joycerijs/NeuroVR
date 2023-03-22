@@ -3,6 +3,8 @@
 import pandas as pd
 import numpy as np
 from bisect import bisect_left
+from statistics import mean
+from collections import defaultdict
 
 
 def preprocessing(dataframe):
@@ -44,20 +46,17 @@ def cut_dataframe(dataframe, person, duration_piece=10):
     d = {}
     times.append(dataframe['Time'][0])
     # Find the start and end times for each piece
-    for i in range(10):
-        duration_piece = 5
-
+    for i in range(30):
         if i == 0:
             time = (take_closest(list(dataframe['Time']), (dataframe['Time'][0]+duration_piece)))
             times.append(time)
-
         else:
             time = (take_closest(list(dataframe['Time']), time+duration_piece))
-            times.append(time)
-
-            if time - times[i-1] < 0.5*duration_piece:
-                times.pop()  # remove last element from list
+            # Tijd niet toevoegen als het stukje korter is dan 0.5 x duration piece
+            if time - times[-1] < 0.5*duration_piece:
                 break
+            else:
+                times.append(time)
     # Find indices of times
     for j in range(len(times)):
         ind = int(dataframe[dataframe['Time'] == times[j]].index.values)
@@ -68,19 +67,23 @@ def cut_dataframe(dataframe, person, duration_piece=10):
     return d
 
 
-def euclidean(dataframe, parameters):
+def euclidean(df, parameters):
     # For head position and hand position
     distances = []
+    time_steps = []
+    dataframe = df.reset_index()
     for i in range(len(dataframe['Time'])-1):
         a = np.array([dataframe[parameters[0]][i], dataframe[parameters[1]][i], dataframe[parameters[2]][i]])
         b = np.array([dataframe[parameters[0]][i+1], dataframe[parameters[1]][i+1], dataframe[parameters[2]][i+1]])
+        time_step = dataframe['Time'][i+1]-dataframe['Time'][i]
         dist = np.linalg.norm(a-b)
+        time_steps.append(time_step)
         distances.append(dist)
-        # geeft nog een error
-    return distances
+    speeds = [i / j for i, j in zip(distances, time_steps)]
+    return speeds
 
 
-path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Testset.csv'
+path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/23-03-16 14-56-02 trackingData.csv'
 df = pd.read_table(path, delimiter=";", dtype=np.float64)
 
 # Remove last rows where time = zero and for now; remove the rows where head position is 0
@@ -91,12 +94,23 @@ dataframe = dataframe_[dataframe_.HeadPosition_X != 0.00000]
 df3 = preprocessing(dataframe)
 
 # Dataframes van de verschillende stukjes maken
-d = cut_dataframe(df3, 1)
+d = cut_dataframe(df3, 1, 15)
+# print(d['dataframe1_1'])
 
-# Euclidean distance berekenen voor posities x, y en z
-distances = euclidean(df3, ['HeadPosition_X', 'HeadPosition_Y', 'HeadPosition_Z'])
-print(distances)
+# Loop voor positions
+positions = ['HeadPosition_X', 'HeadPosition_Y', 'HeadPosition_Z', 'HandPositionRight_X', 'HandPositionRight_Y', 'HandPositionRight_Z']
+dict_sum = defaultdict(list)
 
+for i in list(d.keys()):
+    for j in range(len(positions)):
+        speeds_head = euclidean(d[i], [positions[0], positions[1], positions[2]])
+        speeds_hand = euclidean(d[i], [positions[3], positions[4], positions[5]])
+        dict_sum[f"std_{positions[j]}"].append(np.std(d[i][positions[j]]))
+    dict_sum["mean_speed_HeadPosition"].append(mean(speeds_head))
+    dict_sum["mean_speed_HandPosition"].append(mean(speeds_hand))
+
+df_sum = pd.DataFrame(data=dict_sum) #Deze aan het einde, na het berekenen van alle features
+print(df_sum)
 
 # # Calculate standard deviations of positions x, y, z and rotation x, y and z
 # # print(np.std(df2['HeadPosition_X']))
