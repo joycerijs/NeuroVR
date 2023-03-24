@@ -95,7 +95,7 @@ dataframe_ = df[df.Time != 0.00000]
 dataframe = dataframe_[dataframe_.HeadPosition_X != 0.00000]
 
 # print(dataframe['HeadRotation_X'].head())
-df3 = preprocessing(dataframe, rotations)
+df3 = preprocessing(dataframe)
 print(df3['HeadRotation_Y'])
 
 # Dataframes van de verschillende stukjes maken
