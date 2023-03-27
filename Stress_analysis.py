@@ -87,7 +87,24 @@ def euclidean_speed(df, parameters):
     return speeds
 
 
+def speed(df, parameter):
+    # For rotations
+    distances = []
+    time_steps = []
+    dataframe = df.reset_index()
+    for i in range(len(dataframe['Time'])-1):
+        a = np.array([dataframe[parameter][i]])
+        b = np.array([dataframe[parameter][i+1]])
+        time_step = dataframe['Time'][i+1]-dataframe['Time'][i]
+        dist = np.linalg.norm(a-b)
+        time_steps.append(time_step)
+        distances.append(dist)
+    speeds = [i / j for i, j in zip(distances, time_steps)]
+    return speeds
+
+
 path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/23-03-16 14-56-02 trackingData.csv'
+# path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Testset.csv'
 df = pd.read_table(path, delimiter=";", dtype=np.float64)
 
 # Remove last rows where time = zero and for now; remove the rows where head position is 0
@@ -96,7 +113,6 @@ dataframe = dataframe_[dataframe_.HeadPosition_X != 0.00000]
 
 # print(dataframe['HeadRotation_X'].head())
 df3 = preprocessing(dataframe)
-print(df3['HeadRotation_Y'])
 
 # Dataframes van de verschillende stukjes maken
 d = cut_dataframe(df3, 1, 15)
@@ -110,23 +126,23 @@ rotations = ['HeadRotation_X', 'HeadRotation_Y', 'HeadRotation_Z', 'EyeRotationL
 
 dict_sum = defaultdict(list)
 
+# In deze loop worden voor alle dataframes in de dictionary voor 1 persoon features berekend voor de positions en rotations.
 for i in list(d.keys()):
     for j in range(len(positions)):
-        dict_sum[f"std_{positions[j]}"].append(np.std(d[i][positions[j]]))
+        dict_sum[f"{positions[j]}_std"].append(np.std(d[i][positions[j]]))
+    for k in range(len(rotations)):
+        dict_sum[f"{rotations[k]}_std"].append(np.std(d[i][rotations[k]]))
+        dict_sum[f"{rotations[k]}_speed"].append(mean(speed(d[i], rotations[k])))
     speeds_head = euclidean_speed(d[i], [positions[0], positions[1], positions[2]])
     speeds_hand = euclidean_speed(d[i], [positions[3], positions[4], positions[5]])
-    dict_sum["mean_speed_HeadPosition"].append(mean(speeds_head))
-    dict_sum["mean_speed_HandPosition"].append(mean(speeds_hand))
-
+    dict_sum["HeadPosition_speed"].append(mean(speeds_head))
+    dict_sum["HandPosition_speed"].append(mean(speeds_hand))
 
 df_sum = pd.DataFrame(data=dict_sum)  # Deze aan het einde, na het berekenen van alle features
-# print(df_sum)
 
-# # Calculate standard deviations of positions x, y, z and rotation x, y and z
-# # print(np.std(df2['HeadPosition_X']))
-# # print(np.std(df2['HeadPosition_Y']))
-# # print(np.std(df2['HeadPosition_Z']))
-
-# # print(np.std(df2['HeadRotation_X_unwrap']))
-# # print(np.std(df2['HeadRotation_Y_unwrap']))
-# # print(np.std(df2['HeadRotation_Z_unwrap']))
+# Het combineren van oog features links en rechts en het verwijderen van links en rechts apart
+df_sum['EyeRotationLR_X_speed'] = df_sum[['EyeRotationLeft_X_speed', 'EyeRotationRight_X_speed']].mean(axis=1)
+df_sum['EyeRotationLR_Y_speed'] = df_sum[['EyeRotationLeft_Y_speed', 'EyeRotationRight_Y_speed']].mean(axis=1)
+df_sum['EyeRotationLR_X_std'] = df_sum[['EyeRotationLeft_X_std', 'EyeRotationRight_X_std']].mean(axis=1)
+df_sum['EyeRotationLR_Y_std'] = df_sum[['EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std']].mean(axis=1)
+df_sum2 = df_sum.drop(['EyeRotationLeft_X_speed', 'EyeRotationRight_X_speed', 'EyeRotationLeft_Y_speed', 'EyeRotationRight_Y_speed', 'EyeRotationLeft_X_std', 'EyeRotationRight_X_std', 'EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std'], axis=1)
