@@ -10,14 +10,22 @@ from collections import defaultdict
 def preprocessing(dataframe):
     # Voor nu: vervangen rotatiematrices en confidance columns verwijderen.
 
-    # Replace rotation columns of dataframe to center values around 360 or 0. Voor nu alleen de rotatie van de rechterhand toegevoegd.
-    # Het lukt nog niet om met een loopje de dataframe te wijzigen omdat hij telkens opnieuw gedefinieerd wordt. later nog naar kijken
+    # Replace rotation columns of dataframe to center values around 360 or 0. Voor nu alleen de rotatie van de 
+    # rechterhand toegevoegd.
+    # Het lukt nog niet om met een loopje de dataframe te wijzigen omdat hij telkens opnieuw gedefinieerd wordt. 
+    # later nog naar kijken
     # for key in rotations:
     #     df2 = dataframe.assign(key=np.unwrap(dataframe[key], period=360))
-    df2 = dataframe.assign(HeadRotation_X=np.unwrap(dataframe['HeadRotation_X'], period=360), HeadRotation_Y=np.unwrap(dataframe['HeadRotation_Y'], period=360), HeadRotation_Z=np.unwrap(dataframe['HeadRotation_Z'], period=360),
-                           EyeRotationLeft_X=np.unwrap(dataframe['EyeRotationLeft_X'], period=360), EyeRotationLeft_Y=np.unwrap(dataframe['EyeRotationLeft_Y'], period=360),
-                           EyeRotationRight_X=np.unwrap(dataframe['EyeRotationRight_X'], period=360), EyeRotationRight_Y=np.unwrap(dataframe['EyeRotationRight_Y'], period=360),
-                           HandRotationRight_X=np.unwrap(dataframe['HandRotationRight_X'], period=360), HandRotationRight_Y=np.unwrap(dataframe['HandRotationRight_Y'], period=360), HandRotationRight_Z=np.unwrap(dataframe['HandRotationRight_Z'], period=360))
+    df2 = dataframe.assign(HeadRotation_X=np.unwrap(dataframe['HeadRotation_X'], period=360),
+                           HeadRotation_Y=np.unwrap(dataframe['HeadRotation_Y'], period=360),
+                           HeadRotation_Z=np.unwrap(dataframe['HeadRotation_Z'], period=360),
+                           EyeRotationLeft_X=np.unwrap(dataframe['EyeRotationLeft_X'], period=360),
+                           EyeRotationLeft_Y=np.unwrap(dataframe['EyeRotationLeft_Y'], period=360),
+                           EyeRotationRight_X=np.unwrap(dataframe['EyeRotationRight_X'], period=360),
+                           EyeRotationRight_Y=np.unwrap(dataframe['EyeRotationRight_Y'], period=360),
+                           HandRotationRight_X=np.unwrap(dataframe['HandRotationRight_X'], period=360),
+                           HandRotationRight_Y=np.unwrap(dataframe['HandRotationRight_Y'], period=360),
+                           HandRotationRight_Z=np.unwrap(dataframe['HandRotationRight_Z'], period=360))
 
     # Remove columns that contain 'confidance'
     preprocessed_dataframe = df2[df2.columns.drop(list(df2.filter(regex='Confidance')))]
@@ -88,15 +96,14 @@ def euclidean_speed(df, parameters):
 
 
 def speed(df, parameter):
-    # For rotations
+    # For rotations en face features
     distances = []
     time_steps = []
     dataframe = df.reset_index()
     for i in range(len(dataframe['Time'])-1):
-        a = np.array([dataframe[parameter][i]])
-        b = np.array([dataframe[parameter][i+1]])
         time_step = dataframe['Time'][i+1]-dataframe['Time'][i]
-        dist = np.linalg.norm(a-b)
+        # Hier wordt het absolute verschil berekend
+        dist = np.linalg.norm(dataframe[parameter][i]-dataframe[parameter][i+1])
         time_steps.append(time_step)
         distances.append(dist)
     speeds = [i / j for i, j in zip(distances, time_steps)]
@@ -115,28 +122,48 @@ dataframe = dataframe_[dataframe_.HeadPosition_X != 0.00000]
 df3 = preprocessing(dataframe)
 
 # Dataframes van de verschillende stukjes maken
-d = cut_dataframe(df3, 1, 15)
+d = cut_dataframe(df3, 1, 10)
 # print(d['dataframe1_1'])
 
-# Loop voor positions
-positions = ['HeadPosition_X', 'HeadPosition_Y', 'HeadPosition_Z', 'HandPositionRight_X', 'HandPositionRight_Y', 'HandPositionRight_Z']
+# Keys voor positions
+positions = ['HeadPosition_X', 'HeadPosition_Y', 'HeadPosition_Z', 'HandPositionRight_X', 'HandPositionRight_Y',
+             'HandPositionRight_Z']
 
-# Loop voor rotations
-rotations = ['HeadRotation_X', 'HeadRotation_Y', 'HeadRotation_Z', 'EyeRotationLeft_X', 'EyeRotationLeft_Y', 'EyeRotationRight_X', 'EyeRotationRight_Y', 'HandRotationRight_X', 'HandRotationRight_Y', 'HandRotationRight_Z']
+# Keys voor rotations
+rotations = ['HeadRotation_X', 'HeadRotation_Y', 'HeadRotation_Z', 'EyeRotationLeft_X', 'EyeRotationLeft_Y',
+             'EyeRotationRight_X', 'EyeRotationRight_Y', 'HandRotationRight_X', 'HandRotationRight_Y',
+             'HandRotationRight_Z']
 
+# Keys voor gezichtsfeatures
+face_features = ['BrowLowererL', 'BrowLowererR', 'CheekPuffL', 'CheekPuffR', 'CheekRaiserL', 'CheekRaiserR',
+                 'CheekSuckL', 'CheekSuckR', 'ChinRaiserB', 'ChinRaiserT', 'DimplerL', 'DimplerR', 'EyesClosedL',
+                 'EyesClosedR', 'EyesLookDownL', 'EyesLookDownR', 'EyesLookLeftL', 'EyesLookLeftR', 'EyesLookRightL',
+                 'EyesLookRightR', 'EyesLookUpL', 'EyesLookUpR', 'InnerBrowRaiserL', 'InnerBrowRaiserR', 'JawDrop',
+                 'JawSidewaysLeft', 'JawSidewaysRight', 'JawThrust', 'LidTightenerL', 'LidTightenerR',
+                 'LipCornerDepressorL', 'LipCornerDepressorR', 'LipCornerPullerL', 'LipCornerPullerR', 'LipFunnelerLB',
+                 'LipFunnelerLT', 'LipFunnelerRB', 'LipFunnelerRT', 'LipPressorL', 'LipPressorR', 'LipPuckerL',
+                 'LipPuckerR', 'LipStretcherL', 'LipStretcherR', 'LipSuckLB', 'LipSuckLT', 'LipSuckRB', 'LipSuckRT',
+                 'LipTightenerL', 'LipTightenerR', 'LipsToward', 'LowerLipDepressorL', 'LowerLipDepressorR',
+                 'MouthLeft', 'MouthRight', 'NoseWrinklerL', 'NoseWrinklerR', 'OuterBrowRaiserL', 'OuterBrowRaiserR',
+                 'UpperLidRaiserL', 'UpperLidRaiserR', 'UpperLipRaiserL', 'UpperLipRaiserR']
+
+
+# Lege dict definiëren
 dict_sum = defaultdict(list)
 
-# In deze loop worden voor alle dataframes in de dictionary voor 1 persoon features berekend voor de positions en rotations.
+# In deze loop worden voor alle dataframes in de dictionary voor 1 persoon features berekend voor de positions,
+# rotations en face features.
 for i in list(d.keys()):
     for j in range(len(positions)):
         dict_sum[f"{positions[j]}_std"].append(np.std(d[i][positions[j]]))
     for k in range(len(rotations)):
         dict_sum[f"{rotations[k]}_std"].append(np.std(d[i][rotations[k]]))
         dict_sum[f"{rotations[k]}_speed"].append(mean(speed(d[i], rotations[k])))
-    speeds_head = euclidean_speed(d[i], [positions[0], positions[1], positions[2]])
-    speeds_hand = euclidean_speed(d[i], [positions[3], positions[4], positions[5]])
-    dict_sum["HeadPosition_speed"].append(mean(speeds_head))
-    dict_sum["HandPosition_speed"].append(mean(speeds_hand))
+    for m in range(len(face_features)):
+        dict_sum[f"{face_features[m]}_std"].append(np.std(d[i][face_features[m]]))
+        dict_sum[f"{face_features[m]}_speed"].append(mean(speed(d[i], face_features[m])))
+    dict_sum["HeadPosition_speed"].append(mean(euclidean_speed(d[i], [positions[0], positions[1], positions[2]])))
+    dict_sum["HandPosition_speed"].append(mean(euclidean_speed(d[i], [positions[3], positions[4], positions[5]])))
 
 df_sum = pd.DataFrame(data=dict_sum)  # Deze aan het einde, na het berekenen van alle features
 
@@ -145,4 +172,8 @@ df_sum['EyeRotationLR_X_speed'] = df_sum[['EyeRotationLeft_X_speed', 'EyeRotatio
 df_sum['EyeRotationLR_Y_speed'] = df_sum[['EyeRotationLeft_Y_speed', 'EyeRotationRight_Y_speed']].mean(axis=1)
 df_sum['EyeRotationLR_X_std'] = df_sum[['EyeRotationLeft_X_std', 'EyeRotationRight_X_std']].mean(axis=1)
 df_sum['EyeRotationLR_Y_std'] = df_sum[['EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std']].mean(axis=1)
-df_sum2 = df_sum.drop(['EyeRotationLeft_X_speed', 'EyeRotationRight_X_speed', 'EyeRotationLeft_Y_speed', 'EyeRotationRight_Y_speed', 'EyeRotationLeft_X_std', 'EyeRotationRight_X_std', 'EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std'], axis=1)
+df_sum2 = df_sum.drop(['EyeRotationLeft_X_speed', 'EyeRotationRight_X_speed', 'EyeRotationLeft_Y_speed',
+                       'EyeRotationRight_Y_speed', 'EyeRotationLeft_X_std', 'EyeRotationRight_X_std',
+                       'EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std'], axis=1)
+
+# print(df_sum)
