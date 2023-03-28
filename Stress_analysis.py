@@ -5,6 +5,7 @@ import numpy as np
 from bisect import bisect_left
 from statistics import mean
 from collections import defaultdict
+from sklearn.preprocessing import MinMaxScaler
 
 
 def preprocessing(dataframe):
@@ -37,6 +38,7 @@ def take_closest(myList, myNumber):
     """
     Assumes myList is sorted. Returns closest value to myNumber.
     If two numbers are equally close, return the smallest number.
+    This can be used for finding the start and end time of the data pieces.
     """
     pos = bisect_left(myList, myNumber)
     if pos == 0:
@@ -80,9 +82,10 @@ def cut_dataframe(dataframe, person, duration_piece=10):
 
 
 def euclidean_speed(df, parameters):
-    # For head position and hand position
+    # For position features
     distances = []
     time_steps = []
+    speed_changes = []
     dataframe = df.reset_index()
     for i in range(len(dataframe['Time'])-1):
         a = np.array([dataframe[parameters[0]][i], dataframe[parameters[1]][i], dataframe[parameters[2]][i]])
@@ -91,8 +94,13 @@ def euclidean_speed(df, parameters):
         dist = np.linalg.norm(a-b)
         time_steps.append(time_step)
         distances.append(dist)
-    speeds = [i / j for i, j in zip(distances, time_steps)]
-    return speeds
+    p_speeds = [i / j for i, j in zip(distances, time_steps)]
+    # berekenen van de acceleratie op basis van het verschil in snelheid gedeeld door het verschil in tijd (eerder berekende tijdstapjes)
+    for j in range(len(p_speeds)-1):
+        speed_change = p_speeds[j]-p_speeds[j+1]
+        speed_changes.append(speed_change)
+    p_accelerations = [i / j for i, j in zip(speed_changes, time_steps)]
+    return p_speeds, p_accelerations
 
 
 def speed(df, parameter):
@@ -106,10 +114,23 @@ def speed(df, parameter):
         dist = np.linalg.norm(dataframe[parameter][i]-dataframe[parameter][i+1])
         time_steps.append(time_step)
         distances.append(dist)
-    speeds = [i / j for i, j in zip(distances, time_steps)]
-    return speeds
+    rf_speeds = [i / j for i, j in zip(distances, time_steps)]
+    return rf_speeds
 
 
+def scale_data(data_train):
+    # scale_data(data_train, data_test)
+    keys = data_train.keys()
+    # Scale the data to 0-1
+    scaler = MinMaxScaler()
+    scale_train = scaler.fit_transform(data_train)
+    data_train.loc[:, (keys)] = scale_train
+    # scale_test = scaler.transform(data_test)
+    # data_test.loc[:, (keys)] = scale_train
+    return data_train  # , scale_test
+
+
+# files = ... loopje over alle files in een folder voor het creeeren van verschillende dataframes.
 path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/23-03-16 14-56-02 trackingData.csv'
 # path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Testset.csv'
 df = pd.read_table(path, delimiter=";", dtype=np.float64)
@@ -122,7 +143,7 @@ dataframe = dataframe_[dataframe_.HeadPosition_X != 0.00000]
 df3 = preprocessing(dataframe)
 
 # Dataframes van de verschillende stukjes maken
-d = cut_dataframe(df3, 1, 10)
+d = cut_dataframe(df3, 1, 1)
 # print(d['dataframe1_1'])
 
 # Keys voor positions
@@ -147,7 +168,6 @@ face_features = ['BrowLowererL', 'BrowLowererR', 'CheekPuffL', 'CheekPuffR', 'Ch
                  'MouthLeft', 'MouthRight', 'NoseWrinklerL', 'NoseWrinklerR', 'OuterBrowRaiserL', 'OuterBrowRaiserR',
                  'UpperLidRaiserL', 'UpperLidRaiserR', 'UpperLipRaiserL', 'UpperLipRaiserR']
 
-
 # Lege dict definiëren
 dict_sum = defaultdict(list)
 
@@ -158,22 +178,37 @@ for i in list(d.keys()):
         dict_sum[f"{positions[j]}_std"].append(np.std(d[i][positions[j]]))
     for k in range(len(rotations)):
         dict_sum[f"{rotations[k]}_std"].append(np.std(d[i][rotations[k]]))
-        dict_sum[f"{rotations[k]}_speed"].append(mean(speed(d[i], rotations[k])))
+        dict_sum[f"{rotations[k]}_speed_mean"].append(mean(speed(d[i], rotations[k])))
+        dict_sum[f"{rotations[k]}_speed_std"].append(np.std(speed(d[i], rotations[k])))
     for m in range(len(face_features)):
         dict_sum[f"{face_features[m]}_std"].append(np.std(d[i][face_features[m]]))
-        dict_sum[f"{face_features[m]}_speed"].append(mean(speed(d[i], face_features[m])))
-    dict_sum["HeadPosition_speed"].append(mean(euclidean_speed(d[i], [positions[0], positions[1], positions[2]])))
-    dict_sum["HandPosition_speed"].append(mean(euclidean_speed(d[i], [positions[3], positions[4], positions[5]])))
+        dict_sum[f"{face_features[m]}_speed_mean"].append(mean(speed(d[i], face_features[m])))
+        dict_sum[f"{face_features[m]}_speed_std"].append(np.std(speed(d[i], face_features[m])))
+    dict_sum["HeadPosition_speed_mean"].append(mean((euclidean_speed(d[i], [positions[0], positions[1], positions[2]])[0])))
+    dict_sum["HandPosition_speed_mean"].append(mean((euclidean_speed(d[i], [positions[3], positions[4], positions[5]])[0])))
+    dict_sum["HeadPosition_speed_std"].append(np.std((euclidean_speed(d[i], [positions[0], positions[1], positions[2]])[0])))
+    dict_sum["HandPosition_speed_std"].append(np.std((euclidean_speed(d[i], [positions[3], positions[4], positions[5]])[0])))
+    dict_sum["HeadPosition_acceleration_mean"].append(mean((euclidean_speed(d[i], [positions[0], positions[1], positions[2]])[1])))
+    dict_sum["HandPosition_acceleration_mean"].append(mean((euclidean_speed(d[i], [positions[3], positions[4], positions[5]])[1])))
+    dict_sum["HeadPosition_acceleration_std"].append(np.std((euclidean_speed(d[i], [positions[0], positions[1], positions[2]])[1])))
+    dict_sum["HandPosition_acceleration_std"].append(np.std((euclidean_speed(d[i], [positions[3], positions[4], positions[5]])[1])))
 
 df_sum = pd.DataFrame(data=dict_sum)  # Deze aan het einde, na het berekenen van alle features
 
 # Het combineren van oog features links en rechts en het verwijderen van links en rechts apart
-df_sum['EyeRotationLR_X_speed'] = df_sum[['EyeRotationLeft_X_speed', 'EyeRotationRight_X_speed']].mean(axis=1)
-df_sum['EyeRotationLR_Y_speed'] = df_sum[['EyeRotationLeft_Y_speed', 'EyeRotationRight_Y_speed']].mean(axis=1)
+df_sum['EyeRotationLR_X_speed_mean'] = df_sum[['EyeRotationLeft_X_speed_mean', 'EyeRotationRight_X_speed_mean']].mean(axis=1)
+df_sum['EyeRotationLR_Y_speed_mean'] = df_sum[['EyeRotationLeft_Y_speed_mean', 'EyeRotationRight_Y_speed_mean']].mean(axis=1)
+df_sum['EyeRotationLR_X_speed_std'] = df_sum[['EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std']].mean(axis=1)
+df_sum['EyeRotationLR_Y_speed_std'] = df_sum[['EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std']].mean(axis=1)
 df_sum['EyeRotationLR_X_std'] = df_sum[['EyeRotationLeft_X_std', 'EyeRotationRight_X_std']].mean(axis=1)
 df_sum['EyeRotationLR_Y_std'] = df_sum[['EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std']].mean(axis=1)
-df_sum2 = df_sum.drop(['EyeRotationLeft_X_speed', 'EyeRotationRight_X_speed', 'EyeRotationLeft_Y_speed',
-                       'EyeRotationRight_Y_speed', 'EyeRotationLeft_X_std', 'EyeRotationRight_X_std',
-                       'EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std'], axis=1)
+df_sum2 = df_sum.drop(['EyeRotationLeft_X_speed_mean', 'EyeRotationRight_X_speed_mean', 'EyeRotationLeft_Y_speed_mean',
+                       'EyeRotationRight_Y_speed_mean', 'EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std',
+                       'EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std', 'EyeRotationLeft_X_std',
+                       'EyeRotationRight_X_std', 'EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std'], axis=1)
+# df_sum2 moet een naam krijgen als df_{i} ofzo, zodat voor iedere persoon een andere dataframe wordt gecreeerd.
 
-# print(df_sum)
+# Hierna moeten alle personen samengevoegd worden in 1 dataframe en worden train en test verdeeld.
+
+scaled_data = scale_data(df_sum2)
+print(scaled_data[["HandPosition_acceleration_mean", "HeadPosition_acceleration_mean"]])
