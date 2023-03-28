@@ -135,16 +135,13 @@ path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/23-03-1
 # path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Testset.csv'
 df = pd.read_table(path, delimiter=";", dtype=np.float64)
 
-# Remove last rows where time = zero and for now; remove the rows where head position is 0
+# Remove last rows where time = zero and for now; remove the rows where head position is 0. Dit kan geskipt voor de echte data
 dataframe_ = df[df.Time != 0.00000]
 dataframe = dataframe_[dataframe_.HeadPosition_X != 0.00000]
-
-# print(dataframe['HeadRotation_X'].head())
 df3 = preprocessing(dataframe)
 
 # Dataframes van de verschillende stukjes maken
 d = cut_dataframe(df3, 1, 1)
-# print(d['dataframe1_1'])
 
 # Keys voor positions
 positions = ['HeadPosition_X', 'HeadPosition_Y', 'HeadPosition_Z', 'HandPositionRight_X', 'HandPositionRight_Y',
@@ -211,4 +208,3 @@ df_sum2 = df_sum.drop(['EyeRotationLeft_X_speed_mean', 'EyeRotationRight_X_speed
 # Hierna moeten alle personen samengevoegd worden in 1 dataframe en worden train en test verdeeld.
 
 scaled_data = scale_data(df_sum2)
-print(scaled_data[["HandPosition_acceleration_mean", "HeadPosition_acceleration_mean"]])
