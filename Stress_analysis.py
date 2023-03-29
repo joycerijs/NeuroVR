@@ -203,6 +203,10 @@ for p in files:
                                                                                         positions[2]])[1])))
         dict_sum["HandPosition_acceleration_std"].append(np.std((euclidean_speed(d[i], [positions[3], positions[4],
                                                                                         positions[5]])[1])))
+        if 'stress' in p:
+            dict_sum['Label'].append(1)  # voeg een kolom met het label toe voor iedere window van een set.
+        else:
+            dict_sum['Label'].append(0)
 
     df_sum = pd.DataFrame(data=dict_sum)  # Deze aan het einde, na het berekenen van alle features
 
@@ -223,12 +227,23 @@ for p in files:
     else:
         labels.append(0)
 
+    dict_all_files[f"{p}"] = df_sum2
 
+
+# scaled_data = scale_data(df_sum2)
 cv_10fold = model_selection.StratifiedKFold(n_splits=2)
 
 for i, (train_index, test_index) in enumerate(cv_10fold.split(dict_all_files, labels)):
-    print(f"Fold {i}:")
-    print(f"  Train: index={train_index}")
-    print(f"  Test:  index={test_index}")
+    appended_data_train = []
+    appended_data_test = []
 
-# scaled_data = scale_data(df_sum2)
+    for j in range(len(train_index)):
+        data_train = dict_all_files[(list(dict_all_files.keys()))[(train_index[j])]]
+        appended_data_train.append(data_train)
+    for k in range(len(test_index)):
+        data_test = dict_all_files[(list(dict_all_files.keys()))[(test_index[k])]]
+        appended_data_test.append(data_test)
+
+    appended_data_train = pd.concat(appended_data_train)
+    appended_data_test = pd.concat(appended_data_test)
+    # train en test staan nu in aparte dataframes, maar de labels staan er nog niet bij. Als het goed is staat in de excel 'stress' of destress' als feature.
