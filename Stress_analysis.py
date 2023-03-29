@@ -120,16 +120,16 @@ def speed(df, parameter):
     return rf_speeds
 
 
-def scale_data(data_train):
+def scale_data(data_train, data_test):
     # scale_data(data_train, data_test)
     keys = data_train.keys()
     # Scale the data to 0-1
     scaler = MinMaxScaler()
     scale_train = scaler.fit_transform(data_train)
     data_train.loc[:, (keys)] = scale_train
-    # scale_test = scaler.transform(data_test)
-    # data_test.loc[:, (keys)] = scale_train
-    return data_train  # , scale_test
+    scale_test = scaler.transform(data_test)
+    data_test.loc[:, (keys)] = scale_test
+    return data_train, data_test
 
 
 path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Data onderzoek'
@@ -244,6 +244,7 @@ for i, (train_index, test_index) in enumerate(cv_10fold.split(dict_all_files, la
         data_test = dict_all_files[(list(dict_all_files.keys()))[(test_index[k])]]
         appended_data_test.append(data_test)
 
-    appended_data_train = pd.concat(appended_data_train)
-    appended_data_test = pd.concat(appended_data_test)
+    appended_data_train = pd.concat(appended_data_train, ignore_index=True)
+    appended_data_test = pd.concat(appended_data_test, ignore_index=True)
+    scaled_train, scaled_test = scale_data(appended_data_train, appended_data_test)
     # train en test staan nu in aparte dataframes, maar de labels staan er nog niet bij. Als het goed is staat in de excel 'stress' of destress' als feature.
