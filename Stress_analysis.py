@@ -2,10 +2,12 @@
 
 import pandas as pd
 import numpy as np
+import os
 from bisect import bisect_left
 from statistics import mean
 from collections import defaultdict
 from sklearn.preprocessing import MinMaxScaler
+from sklearn import model_selection
 
 
 def preprocessing(dataframe):
@@ -130,81 +132,103 @@ def scale_data(data_train):
     return data_train  # , scale_test
 
 
-# files = ... loopje over alle files in een folder voor het creeeren van verschillende dataframes.
-path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/23-03-16 14-56-02 trackingData.csv'
-# path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Testset.csv'
-df = pd.read_table(path, delimiter=";", dtype=np.float64)
+path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Data onderzoek'
+files = os.listdir(path)
+dict_all_files = defaultdict(list)  # Lege dict om straks alle personen in op te slaan
+labels = []
 
-# Remove last rows where time = zero and for now; remove the rows where head position is 0. Dit kan geskipt voor de echte data
-dataframe_ = df[df.Time != 0.00000]
-dataframe = dataframe_[dataframe_.HeadPosition_X != 0.00000]
-df3 = preprocessing(dataframe)
+for p in files:
+    # Loop over alle files om dicts te creeren van de features.
+    df = pd.read_table(os.path.join(path, p), delimiter=";", dtype=np.float64)
 
-# Dataframes van de verschillende stukjes maken
-d = cut_dataframe(df3, 1, 1)
+    # Remove last rows where time = zero and for now; remove the rows where head position is 0. Dit kan geskipt voor de echte data
+    dataframe_ = df[df.Time != 0.00000]
+    dataframe = dataframe_[dataframe_.HeadPosition_X != 0.00000]
+    df3 = preprocessing(dataframe)
 
-# Keys voor positions
-positions = ['HeadPosition_X', 'HeadPosition_Y', 'HeadPosition_Z', 'HandPositionRight_X', 'HandPositionRight_Y',
-             'HandPositionRight_Z']
+    # Dataframes van de verschillende stukjes maken
+    d = cut_dataframe(df3, 1, 10)
 
-# Keys voor rotations
-rotations = ['HeadRotation_X', 'HeadRotation_Y', 'HeadRotation_Z', 'EyeRotationLeft_X', 'EyeRotationLeft_Y',
-             'EyeRotationRight_X', 'EyeRotationRight_Y', 'HandRotationRight_X', 'HandRotationRight_Y',
-             'HandRotationRight_Z']
+    # Keys voor positions
+    positions = ['HeadPosition_X', 'HeadPosition_Y', 'HeadPosition_Z', 'HandPositionRight_X', 'HandPositionRight_Y',
+                 'HandPositionRight_Z']
 
-# Keys voor gezichtsfeatures
-face_features = ['BrowLowererL', 'BrowLowererR', 'CheekPuffL', 'CheekPuffR', 'CheekRaiserL', 'CheekRaiserR',
-                 'CheekSuckL', 'CheekSuckR', 'ChinRaiserB', 'ChinRaiserT', 'DimplerL', 'DimplerR', 'EyesClosedL',
-                 'EyesClosedR', 'EyesLookDownL', 'EyesLookDownR', 'EyesLookLeftL', 'EyesLookLeftR', 'EyesLookRightL',
-                 'EyesLookRightR', 'EyesLookUpL', 'EyesLookUpR', 'InnerBrowRaiserL', 'InnerBrowRaiserR', 'JawDrop',
-                 'JawSidewaysLeft', 'JawSidewaysRight', 'JawThrust', 'LidTightenerL', 'LidTightenerR',
-                 'LipCornerDepressorL', 'LipCornerDepressorR', 'LipCornerPullerL', 'LipCornerPullerR', 'LipFunnelerLB',
-                 'LipFunnelerLT', 'LipFunnelerRB', 'LipFunnelerRT', 'LipPressorL', 'LipPressorR', 'LipPuckerL',
-                 'LipPuckerR', 'LipStretcherL', 'LipStretcherR', 'LipSuckLB', 'LipSuckLT', 'LipSuckRB', 'LipSuckRT',
-                 'LipTightenerL', 'LipTightenerR', 'LipsToward', 'LowerLipDepressorL', 'LowerLipDepressorR',
-                 'MouthLeft', 'MouthRight', 'NoseWrinklerL', 'NoseWrinklerR', 'OuterBrowRaiserL', 'OuterBrowRaiserR',
-                 'UpperLidRaiserL', 'UpperLidRaiserR', 'UpperLipRaiserL', 'UpperLipRaiserR']
+    # Keys voor rotations
+    rotations = ['HeadRotation_X', 'HeadRotation_Y', 'HeadRotation_Z', 'EyeRotationLeft_X', 'EyeRotationLeft_Y',
+                 'EyeRotationRight_X', 'EyeRotationRight_Y', 'HandRotationRight_X', 'HandRotationRight_Y',
+                 'HandRotationRight_Z']
 
-# Lege dict definiëren
-dict_sum = defaultdict(list)
+    # Keys voor gezichtsfeatures
+    face_features = ['BrowLowererL', 'BrowLowererR', 'CheekPuffL', 'CheekPuffR', 'CheekRaiserL', 'CheekRaiserR',
+                     'CheekSuckL', 'CheekSuckR', 'ChinRaiserB', 'ChinRaiserT', 'DimplerL', 'DimplerR', 'EyesClosedL',
+                     'EyesClosedR', 'EyesLookDownL', 'EyesLookDownR', 'EyesLookLeftL', 'EyesLookLeftR', 'EyesLookRightL',
+                     'EyesLookRightR', 'EyesLookUpL', 'EyesLookUpR', 'InnerBrowRaiserL', 'InnerBrowRaiserR', 'JawDrop',
+                     'JawSidewaysLeft', 'JawSidewaysRight', 'JawThrust', 'LidTightenerL', 'LidTightenerR',
+                     'LipCornerDepressorL', 'LipCornerDepressorR', 'LipCornerPullerL', 'LipCornerPullerR', 'LipFunnelerLB',
+                     'LipFunnelerLT', 'LipFunnelerRB', 'LipFunnelerRT', 'LipPressorL', 'LipPressorR', 'LipPuckerL',
+                     'LipPuckerR', 'LipStretcherL', 'LipStretcherR', 'LipSuckLB', 'LipSuckLT', 'LipSuckRB', 'LipSuckRT',
+                     'LipTightenerL', 'LipTightenerR', 'LipsToward', 'LowerLipDepressorL', 'LowerLipDepressorR',
+                     'MouthLeft', 'MouthRight', 'NoseWrinklerL', 'NoseWrinklerR', 'OuterBrowRaiserL', 'OuterBrowRaiserR',
+                     'UpperLidRaiserL', 'UpperLidRaiserR', 'UpperLipRaiserL', 'UpperLipRaiserR']
 
-# In deze loop worden voor alle dataframes in de dictionary voor 1 persoon features berekend voor de positions,
-# rotations en face features.
-for i in list(d.keys()):
-    for j in range(len(positions)):
-        dict_sum[f"{positions[j]}_std"].append(np.std(d[i][positions[j]]))
-    for k in range(len(rotations)):
-        dict_sum[f"{rotations[k]}_std"].append(np.std(d[i][rotations[k]]))
-        dict_sum[f"{rotations[k]}_speed_mean"].append(mean(speed(d[i], rotations[k])))
-        dict_sum[f"{rotations[k]}_speed_std"].append(np.std(speed(d[i], rotations[k])))
-    for m in range(len(face_features)):
-        dict_sum[f"{face_features[m]}_std"].append(np.std(d[i][face_features[m]]))
-        dict_sum[f"{face_features[m]}_speed_mean"].append(mean(speed(d[i], face_features[m])))
-        dict_sum[f"{face_features[m]}_speed_std"].append(np.std(speed(d[i], face_features[m])))
-    dict_sum["HeadPosition_speed_mean"].append(mean((euclidean_speed(d[i], [positions[0], positions[1], positions[2]])[0])))
-    dict_sum["HandPosition_speed_mean"].append(mean((euclidean_speed(d[i], [positions[3], positions[4], positions[5]])[0])))
-    dict_sum["HeadPosition_speed_std"].append(np.std((euclidean_speed(d[i], [positions[0], positions[1], positions[2]])[0])))
-    dict_sum["HandPosition_speed_std"].append(np.std((euclidean_speed(d[i], [positions[3], positions[4], positions[5]])[0])))
-    dict_sum["HeadPosition_acceleration_mean"].append(mean((euclidean_speed(d[i], [positions[0], positions[1], positions[2]])[1])))
-    dict_sum["HandPosition_acceleration_mean"].append(mean((euclidean_speed(d[i], [positions[3], positions[4], positions[5]])[1])))
-    dict_sum["HeadPosition_acceleration_std"].append(np.std((euclidean_speed(d[i], [positions[0], positions[1], positions[2]])[1])))
-    dict_sum["HandPosition_acceleration_std"].append(np.std((euclidean_speed(d[i], [positions[3], positions[4], positions[5]])[1])))
+    # Lege dict definiëren
+    dict_sum = defaultdict(list)
 
-df_sum = pd.DataFrame(data=dict_sum)  # Deze aan het einde, na het berekenen van alle features
+    # In deze loop worden voor alle dataframes in de dictionary voor 1 persoon features berekend voor de positions,
+    # rotations en face features.
+    for i in list(d.keys()):
+        for j in range(len(positions)):
+            dict_sum[f"{positions[j]}_std"].append(np.std(d[i][positions[j]]))
+        for k in range(len(rotations)):
+            dict_sum[f"{rotations[k]}_std"].append(np.std(d[i][rotations[k]]))
+            dict_sum[f"{rotations[k]}_speed_mean"].append(mean(speed(d[i], rotations[k])))
+            dict_sum[f"{rotations[k]}_speed_std"].append(np.std(speed(d[i], rotations[k])))
+        for m in range(len(face_features)):
+            dict_sum[f"{face_features[m]}_std"].append(np.std(d[i][face_features[m]]))
+            dict_sum[f"{face_features[m]}_speed_mean"].append(mean(speed(d[i], face_features[m])))
+            dict_sum[f"{face_features[m]}_speed_std"].append(np.std(speed(d[i], face_features[m])))
+        dict_sum["HeadPosition_speed_mean"].append(mean((euclidean_speed(d[i], [positions[0], positions[1],
+                                                                                positions[2]])[0])))
+        dict_sum["HandPosition_speed_mean"].append(mean((euclidean_speed(d[i], [positions[3], positions[4],
+                                                                                positions[5]])[0])))
+        dict_sum["HeadPosition_speed_std"].append(np.std((euclidean_speed(d[i], [positions[0], positions[1],
+                                                                                 positions[2]])[0])))
+        dict_sum["HandPosition_speed_std"].append(np.std((euclidean_speed(d[i], [positions[3], positions[4],
+                                                                                 positions[5]])[0])))
+        dict_sum["HeadPosition_acceleration_mean"].append(mean((euclidean_speed(d[i], [positions[0], positions[1],
+                                                                                       positions[2]])[1])))
+        dict_sum["HandPosition_acceleration_mean"].append(mean((euclidean_speed(d[i], [positions[3], positions[4],
+                                                                                       positions[5]])[1])))
+        dict_sum["HeadPosition_acceleration_std"].append(np.std((euclidean_speed(d[i], [positions[0], positions[1],
+                                                                                        positions[2]])[1])))
+        dict_sum["HandPosition_acceleration_std"].append(np.std((euclidean_speed(d[i], [positions[3], positions[4],
+                                                                                        positions[5]])[1])))
 
-# Het combineren van oog features links en rechts en het verwijderen van links en rechts apart
-df_sum['EyeRotationLR_X_speed_mean'] = df_sum[['EyeRotationLeft_X_speed_mean', 'EyeRotationRight_X_speed_mean']].mean(axis=1)
-df_sum['EyeRotationLR_Y_speed_mean'] = df_sum[['EyeRotationLeft_Y_speed_mean', 'EyeRotationRight_Y_speed_mean']].mean(axis=1)
-df_sum['EyeRotationLR_X_speed_std'] = df_sum[['EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std']].mean(axis=1)
-df_sum['EyeRotationLR_Y_speed_std'] = df_sum[['EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std']].mean(axis=1)
-df_sum['EyeRotationLR_X_std'] = df_sum[['EyeRotationLeft_X_std', 'EyeRotationRight_X_std']].mean(axis=1)
-df_sum['EyeRotationLR_Y_std'] = df_sum[['EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std']].mean(axis=1)
-df_sum2 = df_sum.drop(['EyeRotationLeft_X_speed_mean', 'EyeRotationRight_X_speed_mean', 'EyeRotationLeft_Y_speed_mean',
-                       'EyeRotationRight_Y_speed_mean', 'EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std',
-                       'EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std', 'EyeRotationLeft_X_std',
-                       'EyeRotationRight_X_std', 'EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std'], axis=1)
-# df_sum2 moet een naam krijgen als df_{i} ofzo, zodat voor iedere persoon een andere dataframe wordt gecreeerd.
+    df_sum = pd.DataFrame(data=dict_sum)  # Deze aan het einde, na het berekenen van alle features
 
-# Hierna moeten alle personen samengevoegd worden in 1 dataframe en worden train en test verdeeld.
+    # Het combineren van oog features links en rechts en het verwijderen van links en rechts apart
+    df_sum['EyeRotationLR_X_speed_mean'] = df_sum[['EyeRotationLeft_X_speed_mean', 'EyeRotationRight_X_speed_mean']].mean(axis=1)
+    df_sum['EyeRotationLR_Y_speed_mean'] = df_sum[['EyeRotationLeft_Y_speed_mean', 'EyeRotationRight_Y_speed_mean']].mean(axis=1)
+    df_sum['EyeRotationLR_X_speed_std'] = df_sum[['EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std']].mean(axis=1)
+    df_sum['EyeRotationLR_Y_speed_std'] = df_sum[['EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std']].mean(axis=1)
+    df_sum['EyeRotationLR_X_std'] = df_sum[['EyeRotationLeft_X_std', 'EyeRotationRight_X_std']].mean(axis=1)
+    df_sum['EyeRotationLR_Y_std'] = df_sum[['EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std']].mean(axis=1)
+    df_sum2 = df_sum.drop(['EyeRotationLeft_X_speed_mean', 'EyeRotationRight_X_speed_mean', 'EyeRotationLeft_Y_speed_mean',
+                           'EyeRotationRight_Y_speed_mean', 'EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std',
+                           'EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std', 'EyeRotationLeft_X_std',
+                           'EyeRotationRight_X_std', 'EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std'], axis=1)
+    dict_all_files[f"{p}"].append(df_sum2)
+    if 'stress' in p:
+        labels.append(1)
+    else:
+        labels.append(0)
 
-scaled_data = scale_data(df_sum2)
+
+cv_10fold = model_selection.StratifiedKFold(n_splits=2)
+
+for i, (train_index, test_index) in enumerate(cv_10fold.split(dict_all_files, labels)):
+    print(f"Fold {i}:")
+    print(f"  Train: index={train_index}")
+    print(f"  Test:  index={test_index}")
+
+# scaled_data = scale_data(df_sum2)
