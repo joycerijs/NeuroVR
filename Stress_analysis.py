@@ -208,7 +208,8 @@ for p in files:
     df3 = preprocessing(dataframe)
 
     # Dataframes van de verschillende stukjes maken
-    d = cut_dataframe(df3, 1, 10)
+    duration = 10  # Change duration of pieces
+    d = cut_dataframe(df3, 1, duration)
 
     # Keys voor positions
     positions = ['HeadPosition_X', 'HeadPosition_Y', 'HeadPosition_Z', 'HandPositionRight_X', 'HandPositionRight_Y',
@@ -317,9 +318,9 @@ for i, (train_index, test_index) in enumerate(cv_10fold.split(dict_all_files, la
     scaled_train, scaled_test = scale_data(appended_data_train, appended_data_test)
     # train en test staan nu in aparte dataframes, met labels.
 
-    train_label = appended_data_train['Label']
+    train_label = list(appended_data_train['Label'])
     train_data = appended_data_train.drop(['Label'], axis=1)
-    test_label = appended_data_test['Label']
+    test_label = list(appended_data_test['Label'])
     test_data = appended_data_test.drop(['Label'], axis=1)
 
     clf_RF_all = RandomForestClassifier()
