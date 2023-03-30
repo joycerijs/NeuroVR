@@ -8,6 +8,11 @@ from statistics import mean
 from collections import defaultdict
 from sklearn.preprocessing import MinMaxScaler
 from sklearn import model_selection
+import matplotlib.pyplot as plt
+from sklearn import metrics
+from sklearn.metrics import auc
+from sklearn.metrics import confusion_matrix
+from sklearn.ensemble import RandomForestClassifier
 
 
 def preprocessing(dataframe):
@@ -132,6 +137,62 @@ def scale_data(data_train, data_test):
     return data_train, data_test
 
 
+def pipeline_model(train_data, train_label, test_data, test_label, clf, tprs, aucs, spec, sens, accuracy, axis):
+    '''In this function, a machine learning model is created and tested. Dataframes of the train data, train labels, test data and test labels
+    must be given as input. Also, the classifier must be given as input. Scoring metrics true positives, area under curve, specificity, sensitivity
+    and accuracy must be given as input, these scores are appended every fold and are returned. The axis must also be given in order to plot the ROC curves
+    for the different folds in the right figure.'''
+    # Fit and test the classifier
+    clf.fit(train_data, train_label)
+    predicted = clf.predict(test_data)
+
+    print(predicted)
+    # plot ROC-curve per fold
+    mean_fpr = np.linspace(0, 1, 100)    # Help for plotting the false positive rate
+    viz = metrics.plot_roc_curve(clf, test_data, test_label, name='ROC fold {}'.format(i), alpha=0.3, lw=1, ax=axis)    # Plot the ROC-curve for this fold on the specified axis.
+    interp_tpr = np.interp(mean_fpr, viz.fpr, viz.tpr)    # Interpolate the true positive rate
+    interp_tpr[0] = 0.0    # Set the first value of the interpolated true positive rate to 0.0
+    tprs.append(interp_tpr)   # Append the interpolated true positive rate to the list
+    aucs.append(viz.roc_auc)    # Append the area under the curve to the list
+
+    # Calculate the scoring metrics
+    tn, fp, fn, tp = confusion_matrix(test_label, predicted).ravel()   # Find the true negatives, false positives, false negatives and true positives from the confusion matrix
+    print(test_label)
+    print(tn)
+    
+    spec.append(tn/(tn+fp))    # Append the specificity to the list
+    sens.append(tp/(tp+fn))    # Append the sensitivity to the list
+    accuracy.append(metrics.accuracy_score(test_label, predicted))    # Append the accuracy to the list
+
+    return tprs, aucs, spec, sens, accuracy
+
+
+def mean_ROC_curves(tprs, aucs, axis):
+    '''With this function, the mean ROC-curves of the models over a 10-cross-validation are plot.
+    The true positive rates, areas under the curve and axes where the mean ROC-curve must be plot
+    are given as input for different models. The figures are filled with the mean and std ROC-curve and
+    can be visualized with plt.show()'''
+    # for i, (tprs, aucs, axis) in enumerate(zip(tprs_all, aucs_all, axis_all)):   # Loop over the tprs, aucs and first three axes for the figures of the three different models.
+    # Calculate means and standard deviations of true positive rate, false positive rate and area under curve
+    mean_tpr = np.mean(tprs, axis=0)
+    mean_tpr[-1] = 1.0
+    mean_fpr = np.linspace(0, 1, 100)
+    mean_auc = metrics.auc(mean_fpr, mean_tpr)
+    std_auc = np.std(aucs)
+    std_tpr = np.std(tprs, axis=0)
+    axis.plot(mean_fpr, mean_tpr, color='b', label=r'Mean ROC (AUC = %0.2f $\pm$ %0.2f)' % (mean_auc, std_auc), lw=2, alpha=.8)   # Plot the mean ROC-curve for the corresponding model
+    # axis_all.plot(mean_fpr, mean_tpr, label=fr'Mean ROC model {(i+1)} (AUC = %0.2f $\pm$ %0.2f)' % (mean_auc, std_auc), lw=2, alpha=.8)    # Plot the mean ROC-curve for the corresponding model in another figure
+    tprs_upper = np.minimum(mean_tpr + std_tpr, 1)    # Set the upper value of the true positive rates
+    tprs_lower = np.maximum(mean_tpr - std_tpr, 0)    # Set the upper value of the true positive rates
+    axis.fill_between(mean_fpr, tprs_lower, tprs_upper, color='grey', alpha=.2, label=r'$\pm$ 1 std. dev.')    # Plot the standard deviations of the ROC-curves
+    axis.set(xlim=[-0.05, 1.05], ylim=[-0.05, 1.05], title='ROC-curves model')    # Set axes and title
+    axis.legend(loc="lower right")    # Set legend
+    # axis_all.fill_between(mean_fpr, tprs_lower, tprs_upper, alpha=.2, label=r'$\pm$ 1 std. dev.')    # Plot the standard deviations of the ROC-curves in another figure
+    # axis_all.set(xlim=[-0.05, 1.05], ylim=[-0.05, 1.05], title='Mean ROC-curve for the three models')    # Set axes and title
+    # axis_all.legend(loc="lower right")    # Set legend
+    return
+
+
 path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Data onderzoek'
 files = os.listdir(path)
 dict_all_files = defaultdict(list)  # Lege dict om straks alle personen in op te slaan
@@ -223,15 +284,22 @@ for p in files:
                            'EyeRotationRight_X_std', 'EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std'], axis=1)
     dict_all_files[f"{p}"].append(df_sum2)
     if 'stress' in p:
-        labels.append(1)
-    else:
         labels.append(0)
+    else:
+        labels.append(1)
 
     dict_all_files[f"{p}"] = df_sum2
 
 
 # scaled_data = scale_data(df_sum2)
 cv_10fold = model_selection.StratifiedKFold(n_splits=2)
+
+tprs_RF_all = []
+aucs_RF_all = []
+spec_RF_all = []
+sens_RF_all = []
+accuracy_RF_all = []
+_, axis_RF_all = plt.subplots()
 
 for i, (train_index, test_index) in enumerate(cv_10fold.split(dict_all_files, labels)):
     appended_data_train = []
@@ -247,4 +315,25 @@ for i, (train_index, test_index) in enumerate(cv_10fold.split(dict_all_files, la
     appended_data_train = pd.concat(appended_data_train, ignore_index=True)
     appended_data_test = pd.concat(appended_data_test, ignore_index=True)
     scaled_train, scaled_test = scale_data(appended_data_train, appended_data_test)
-    # train en test staan nu in aparte dataframes, maar de labels staan er nog niet bij. Als het goed is staat in de excel 'stress' of destress' als feature.
+    # train en test staan nu in aparte dataframes, met labels.
+
+    train_label = appended_data_train['Label']
+    train_data = appended_data_train.drop(['Label'], axis=1)
+    test_label = appended_data_test['Label']
+    test_data = appended_data_test.drop(['Label'], axis=1)
+
+    clf_RF_all = RandomForestClassifier()
+    # Random forest with all features: create model
+    tprs_RF_all, aucs_RF_all, spec_RF_all, sens_RF_all, accuracy_RF_all = pipeline_model(train_data, train_label, test_data, test_label, clf_RF_all, tprs_RF_all, aucs_RF_all, spec_RF_all, sens_RF_all, accuracy_RF_all, axis_RF_all)
+
+# mean_ROC_curves(tprs_RF_all, aucs_RF_all, axis_RF_all)
+# plt.show()
+
+dict_scores = {'Model 1: RF with all features': [f'{np.round(mean(accuracy_RF_all), decimals=2)} ± {np.round(np.std(accuracy_RF_all), decimals=2)}',
+                                                 f'{np.round(mean(sens_RF_all), decimals=2)} ± {np.round(np.std(sens_RF_all), decimals=2)}',
+                                                 f'{np.round(mean(spec_RF_all), decimals=2)} ± {np.round(np.std(spec_RF_all), decimals=2)}',
+                                                 f'{np.round(mean(aucs_RF_all), decimals=2)} ± {np.round(np.std(aucs_RF_all), decimals=2)}']}
+
+df_scores = pd.DataFrame.from_dict(dict_scores, orient='index', columns=['Accuracy', 'Sensitivity', 'Specificity', 'Area under ROC-curve'])
+
+print(df_scores)
