@@ -284,9 +284,9 @@ for p in files:
                            'EyeRotationRight_X_std', 'EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std'], axis=1)
     dict_all_files[f"{p}"].append(df_sum2)
     if 'stress' in p:
-        labels.append(0)
-    else:
         labels.append(1)
+    else:
+        labels.append(0)
 
     dict_all_files[f"{p}"] = df_sum2
 
