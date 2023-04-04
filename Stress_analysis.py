@@ -159,7 +159,7 @@ def pipeline_model(train_data, train_label, test_data, test_label, clf, tprs, au
     tn, fp, fn, tp = confusion_matrix(test_label, predicted).ravel()   # Find the true negatives, false positives, false negatives and true positives from the confusion matrix
     print(test_label)
     print(tn)
-    
+
     spec.append(tn/(tn+fp))    # Append the specificity to the list
     sens.append(tp/(tp+fn))    # Append the sensitivity to the list
     accuracy.append(metrics.accuracy_score(test_label, predicted))    # Append the accuracy to the list
@@ -193,14 +193,15 @@ def mean_ROC_curves(tprs, aucs, axis):
     return
 
 
-path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Data onderzoek'
+path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Test'
 files = os.listdir(path)
 dict_all_files = defaultdict(list)  # Lege dict om straks alle personen in op te slaan
 labels = []
 
 for p in files:
     # Loop over alle files om dicts te creeren van de features.
-    df = pd.read_table(os.path.join(path, p), delimiter=";", dtype=np.float64)
+    # df = pd.read_table(os.path.join(path, p), delimiter=";", converters={"Time": to_float}, dtype=np.float64)
+    df = pd.read_table(os.path.join(path, p), delimiter=";", decimal=',')
 
     # Remove last rows where time = zero and for now; remove the rows where head position is 0. Dit kan geskipt voor de echte data
     dataframe_ = df[df.Time != 0.00000]
@@ -208,7 +209,7 @@ for p in files:
     df3 = preprocessing(dataframe)
 
     # Dataframes van de verschillende stukjes maken
-    duration = 10  # Change duration of pieces
+    duration = 30  # Change duration of pieces
     d = cut_dataframe(df3, 1, duration)
 
     # Keys voor positions
@@ -265,7 +266,7 @@ for p in files:
                                                                                         positions[2]])[1])))
         dict_sum["HandPosition_acceleration_std"].append(np.std((euclidean_speed(d[i], [positions[3], positions[4],
                                                                                         positions[5]])[1])))
-        if 'stress' in p:
+        if df3['PrevSceneName'][2] == 'Stress':
             dict_sum['Label'].append(1)  # voeg een kolom met het label toe voor iedere window van een set.
         else:
             dict_sum['Label'].append(0)
@@ -284,7 +285,7 @@ for p in files:
                            'EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std', 'EyeRotationLeft_X_std',
                            'EyeRotationRight_X_std', 'EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std'], axis=1)
     dict_all_files[f"{p}"].append(df_sum2)
-    if 'stress' in p:
+    if df3['PrevSceneName'][2] == 'Stress':
         labels.append(1)
     else:
         labels.append(0)
@@ -293,7 +294,7 @@ for p in files:
 
 
 # scaled_data = scale_data(df_sum2)
-cv_10fold = model_selection.StratifiedKFold(n_splits=2)
+cv_10fold = model_selection.StratifiedKFold(n_splits=4)
 
 tprs_RF_all = []
 aucs_RF_all = []
