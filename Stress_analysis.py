@@ -146,7 +146,6 @@ def pipeline_model(train_data, train_label, test_data, test_label, clf, tprs, au
     clf.fit(train_data, train_label)
     predicted = clf.predict(test_data)
 
-    print(predicted)
     # plot ROC-curve per fold
     mean_fpr = np.linspace(0, 1, 100)    # Help for plotting the false positive rate
     viz = metrics.plot_roc_curve(clf, test_data, test_label, name='ROC fold {}'.format(i), alpha=0.3, lw=1, ax=axis)    # Plot the ROC-curve for this fold on the specified axis.
@@ -157,14 +156,12 @@ def pipeline_model(train_data, train_label, test_data, test_label, clf, tprs, au
 
     # Calculate the scoring metrics
     tn, fp, fn, tp = confusion_matrix(test_label, predicted).ravel()   # Find the true negatives, false positives, false negatives and true positives from the confusion matrix
-    print(test_label)
-    print(tn)
 
     spec.append(tn/(tn+fp))    # Append the specificity to the list
     sens.append(tp/(tp+fn))    # Append the sensitivity to the list
     accuracy.append(metrics.accuracy_score(test_label, predicted))    # Append the accuracy to the list
 
-    return tprs, aucs, spec, sens, accuracy
+    return tprs, aucs, spec, sens, accuracy, predicted
 
 
 def mean_ROC_curves(tprs, aucs, axis):
@@ -193,14 +190,14 @@ def mean_ROC_curves(tprs, aucs, axis):
     return
 
 
-path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Test'
+path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Test 2'
 files = os.listdir(path)
 dict_all_files = defaultdict(list)  # Lege dict om straks alle personen in op te slaan
 labels = []
 
 for p in files:
     # Loop over alle files om dicts te creeren van de features.
-    # df = pd.read_table(os.path.join(path, p), delimiter=";", converters={"Time": to_float}, dtype=np.float64)
+    # df = pd.read_table(os.path.join(path, p), delimiter=";", dtype=np.float64)
     df = pd.read_table(os.path.join(path, p), delimiter=";", decimal=',')
 
     # Remove last rows where time = zero and for now; remove the rows where head position is 0. Dit kan geskipt voor de echte data
@@ -209,7 +206,7 @@ for p in files:
     df3 = preprocessing(dataframe)
 
     # Dataframes van de verschillende stukjes maken
-    duration = 30  # Change duration of pieces
+    duration = 20  # Change duration of pieces
     d = cut_dataframe(df3, 1, duration)
 
     # Keys voor positions
@@ -290,11 +287,10 @@ for p in files:
     else:
         labels.append(0)
 
-    dict_all_files[f"{p}"] = df_sum2
-
+    dict_all_files[f"{p}"] = df_sum2  # Nog uitzoeken waarom ik dit allebei had
 
 # scaled_data = scale_data(df_sum2)
-cv_10fold = model_selection.StratifiedKFold(n_splits=4)
+cv_10fold = model_selection.StratifiedKFold(n_splits=2)
 
 tprs_RF_all = []
 aucs_RF_all = []
@@ -309,6 +305,7 @@ for i, (train_index, test_index) in enumerate(cv_10fold.split(dict_all_files, la
 
     for j in range(len(train_index)):
         data_train = dict_all_files[(list(dict_all_files.keys()))[(train_index[j])]]
+        data_train['Set'] = np.ones(len(data_train))*j  # Append a column with 'set'
         appended_data_train.append(data_train)
     for k in range(len(test_index)):
         data_test = dict_all_files[(list(dict_all_files.keys()))[(test_index[k])]]
@@ -316,26 +313,36 @@ for i, (train_index, test_index) in enumerate(cv_10fold.split(dict_all_files, la
 
     appended_data_train = pd.concat(appended_data_train, ignore_index=True)
     appended_data_test = pd.concat(appended_data_test, ignore_index=True)
-    scaled_train, scaled_test = scale_data(appended_data_train, appended_data_test)
+    # scaled_train, scaled_test = scale_data(appended_data_train, appended_data_test)
     # train en test staan nu in aparte dataframes, met labels.
 
     train_label = list(appended_data_train['Label'])
-    train_data = appended_data_train.drop(['Label'], axis=1)
+    train_data = appended_data_train.drop(['Label', 'Set'], axis=1)
     test_label = list(appended_data_test['Label'])
     test_data = appended_data_test.drop(['Label'], axis=1)
 
     clf_RF_all = RandomForestClassifier()
     # Random forest with all features: create model
-    tprs_RF_all, aucs_RF_all, spec_RF_all, sens_RF_all, accuracy_RF_all = pipeline_model(train_data, train_label, test_data, test_label, clf_RF_all, tprs_RF_all, aucs_RF_all, spec_RF_all, sens_RF_all, accuracy_RF_all, axis_RF_all)
+    tprs_RF_all, aucs_RF_all, spec_RF_all, sens_RF_all, accuracy_RF_all, predicted = pipeline_model(train_data, train_label, test_data, test_label, clf_RF_all, tprs_RF_all, aucs_RF_all, spec_RF_all, sens_RF_all, accuracy_RF_all, axis_RF_all)
+
+    # Start aan loopje om per set te berekenen hoeveel windows als stress gelabeld moeten worden.
+    for m in range(len(train_index)):
+        sum = appended_data_train[appended_data_train['Set'] == m]['Label'].sum()
+        appended_data_train['Predicted label'] = predicted
+        sum_predicted = appended_data_train[appended_data_train['Set'] == m]['Predicted label'].sum()
+        # het werkt nog niet omdat predicted aan appended_data_train wordt toegevoegd, dus hij neemt die mee als input feature.
+
+    print(sum)
+    print(sum_predicted)
 
 # mean_ROC_curves(tprs_RF_all, aucs_RF_all, axis_RF_all)
 # plt.show()
 
-dict_scores = {'Model 1: RF with all features': [f'{np.round(mean(accuracy_RF_all), decimals=2)} ± {np.round(np.std(accuracy_RF_all), decimals=2)}',
-                                                 f'{np.round(mean(sens_RF_all), decimals=2)} ± {np.round(np.std(sens_RF_all), decimals=2)}',
-                                                 f'{np.round(mean(spec_RF_all), decimals=2)} ± {np.round(np.std(spec_RF_all), decimals=2)}',
-                                                 f'{np.round(mean(aucs_RF_all), decimals=2)} ± {np.round(np.std(aucs_RF_all), decimals=2)}']}
+# dict_scores = {'Model 1: RF with all features': [f'{np.round(mean(accuracy_RF_all), decimals=2)} ± {np.round(np.std(accuracy_RF_all), decimals=2)}',
+#                                                  f'{np.round(mean(sens_RF_all), decimals=2)} ± {np.round(np.std(sens_RF_all), decimals=2)}',
+#                                                  f'{np.round(mean(spec_RF_all), decimals=2)} ± {np.round(np.std(spec_RF_all), decimals=2)}',
+#                                                  f'{np.round(mean(aucs_RF_all), decimals=2)} ± {np.round(np.std(aucs_RF_all), decimals=2)}']}
 
-df_scores = pd.DataFrame.from_dict(dict_scores, orient='index', columns=['Accuracy', 'Sensitivity', 'Specificity', 'Area under ROC-curve'])
+# df_scores = pd.DataFrame.from_dict(dict_scores, orient='index', columns=['Accuracy', 'Sensitivity', 'Specificity', 'Area under ROC-curve'])
 
-print(df_scores)
+# print(df_scores)
