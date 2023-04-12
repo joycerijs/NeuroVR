@@ -190,9 +190,9 @@ def mean_ROC_curves(tprs, aucs, axis):
     return
 
 
-path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Test 2'
+path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Alle data'
 files = os.listdir(path)
-dict_all_files = defaultdict(list)  # Lege dict om straks alle personen in op te slaan
+dict_all_files = {}  # Lege dict om straks alle personen in op te slaan
 labels = []
 
 for idp, p in enumerate(files):
@@ -202,12 +202,13 @@ for idp, p in enumerate(files):
 
     # Remove last rows where time = zero and for now; remove the rows where head position is 0. Dit kan geskipt voor de echte data
     dataframe_ = df[df.Time != 0.00000]
-    # dataframe = dataframe_[dataframe_.ExpressionConfidanceUpperFace > 0.5]  # Missing data rijen verwijderen. die zijn -1.
-    df3 = preprocessing(dataframe_)
+    dataframe = dataframe_.drop(dataframe_[dataframe_.ExpressionConfidanceUpperFace < 0.2].index)  # Missing data rijen verwijderen. die zijn -1. Misschien reset index?
+    # dataframe = dataframe_[dataframe_.ExpressionConfidanceUpperFace > 0.5]  # Missing data rijen verwijderen. die zijn -1. Misschien reset index?
+    df3 = preprocessing(dataframe.reset_index())
 
     # Dataframes van de verschillende stukjes maken
     duration = 30  # Change duration of pieces
-    d = cut_dataframe(df3, 1, duration)
+    d = cut_dataframe(df3, idp, duration)
 
     # Keys voor positions
     positions = ['HeadPosition_X', 'HeadPosition_Y', 'HeadPosition_Z', 'HandPositionRight_X', 'HandPositionRight_Y',
@@ -283,17 +284,17 @@ for idp, p in enumerate(files):
                            'EyeRotationRight_Y_speed_mean', 'EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std',
                            'EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std', 'EyeRotationLeft_X_std',
                            'EyeRotationRight_X_std', 'EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std'], axis=1)
-    #dict_all_files[f"{p}"].append(df_sum2)
-    dict_all_files[f"Set {idp}"].append(df_sum2)
+    # dict_all_files[f"{p}"].append(df_sum2)
+    # dict_all_files[f"Set {idp}"].append(df_sum2)
     if df3['PrevSceneName'][2] == 'Stress':
         labels.append(1)
     else:
         labels.append(0)
 
-   # dict_all_files[f"{p}"] = df_sum2  # Nog uitzoeken waarom ik dit allebei had
+    dict_all_files[f"{idp}"] = df_sum2  # Nog uitzoeken waarom ik dit allebei had
 
 # scaled_data = scale_data(df_sum2)
-cv_10fold = model_selection.StratifiedKFold(n_splits=2)
+cv_10fold = model_selection.StratifiedKFold(n_splits=5)
 
 tprs_RF_all = []
 aucs_RF_all = []
@@ -328,23 +329,21 @@ for i, (train_index, test_index) in enumerate(cv_10fold.split(dict_all_files, la
     tprs_RF_all, aucs_RF_all, spec_RF_all, sens_RF_all, accuracy_RF_all, predicted = pipeline_model(train_data, train_label, test_data, test_label, clf_RF_all, tprs_RF_all, aucs_RF_all, spec_RF_all, sens_RF_all, accuracy_RF_all, axis_RF_all)
 
     # Start aan loopje om per set te berekenen hoeveel windows als stress gelabeld moeten worden.
-    for m in range(len(train_index)):
-        sum = appended_data_train[appended_data_train['Set'] == m]['Label'].sum()
-        dict_predicted = {'Set': list(appended_data_train['Set']), 'Predicted label': predicted}
+    for m in test_index:
+        sum = appended_data_test[appended_data_test['Set'] == m]['Label'].sum()
+        dict_predicted = {'Set': list(appended_data_test['Set']), 'Predicted label': predicted}
         df_predicted = pd.DataFrame(data=dict_predicted)
         sum_predicted = df_predicted[df_predicted['Set'] == m]['Predicted label'].sum()
-
-    print(sum)
-    print(sum_predicted)
+        print(f'sum: {sum}, sum predicted: {sum_predicted}')
 
 # mean_ROC_curves(tprs_RF_all, aucs_RF_all, axis_RF_all)
 # plt.show()
 
-# dict_scores = {'Model 1: RF with all features': [f'{np.round(mean(accuracy_RF_all), decimals=2)} ± {np.round(np.std(accuracy_RF_all), decimals=2)}',
-#                                                  f'{np.round(mean(sens_RF_all), decimals=2)} ± {np.round(np.std(sens_RF_all), decimals=2)}',
-#                                                  f'{np.round(mean(spec_RF_all), decimals=2)} ± {np.round(np.std(spec_RF_all), decimals=2)}',
-#                                                  f'{np.round(mean(aucs_RF_all), decimals=2)} ± {np.round(np.std(aucs_RF_all), decimals=2)}']}
+dict_scores = {'Model 1: RF with all features': [f'{np.round(mean(accuracy_RF_all), decimals=2)} ± {np.round(np.std(accuracy_RF_all), decimals=2)}',
+                                                 f'{np.round(mean(sens_RF_all), decimals=2)} ± {np.round(np.std(sens_RF_all), decimals=2)}',
+                                                 f'{np.round(mean(spec_RF_all), decimals=2)} ± {np.round(np.std(spec_RF_all), decimals=2)}',
+                                                 f'{np.round(mean(aucs_RF_all), decimals=2)} ± {np.round(np.std(aucs_RF_all), decimals=2)}']}
 
-# df_scores = pd.DataFrame.from_dict(dict_scores, orient='index', columns=['Accuracy', 'Sensitivity', 'Specificity', 'Area under ROC-curve'])
+df_scores = pd.DataFrame.from_dict(dict_scores, orient='index', columns=['Accuracy', 'Sensitivity', 'Specificity', 'Area under ROC-curve'])
 
-# print(df_scores)
+print(df_scores)
