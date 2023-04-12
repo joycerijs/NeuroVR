@@ -118,7 +118,7 @@ def speed(df, parameter):
     return rf_speeds
 
 
-path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Alle data'
+path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Rust data'
 files = os.listdir(path)
 dict_all_files = {}  # Lege dict om straks alle personen in op te slaan
 labels = []
@@ -131,12 +131,12 @@ for idp, p in enumerate(files):
     # Remove last rows where time = zero and for now; remove the rows where head position is 0. Dit kan geskipt voor de echte data
     dataframe_ = df[df.Time != 0.00000]
     dataframe = dataframe_.drop(dataframe_[dataframe_.ExpressionConfidanceUpperFace < 0.2].index)  # Missing data rijen verwijderen. die zijn -1. Misschien reset index?
-    # dataframe = dataframe_[dataframe_.ExpressionConfidanceUpperFace > 0.5]  # Missing data rijen verwijderen. die zijn -1. Misschien reset index?
     df3 = preprocessing(dataframe.reset_index())
 
-    # Dataframes van de verschillende stukjes maken
-    duration = 30  # Change duration of pieces
+    # # Dataframes van de verschillende stukjes maken
+    duration = 180  # Change duration of pieces
     d = cut_dataframe(df3, idp, duration)
+    # d = df3
 
     # Keys voor positions
     positions = ['HeadPosition_X', 'HeadPosition_Y', 'HeadPosition_Z', 'HandPositionRight_X', 'HandPositionRight_Y',
@@ -192,13 +192,6 @@ for idp, p in enumerate(files):
                                                                                         positions[2]])[1])))
         dict_sum["HandPosition_acceleration_std"].append(np.std((euclidean_speed(d[i], [positions[3], positions[4],
                                                                                         positions[5]])[1])))
-        dict_sum['Set'].append(idp)  # voeg een kolom toe met de naam van de set (dus het getal van de file (1 t/m 40 ongeveer))
-
-        if df3['PrevSceneName'][2] == 'Stress':
-            dict_sum['Label'].append(1)  # voeg een kolom met het label toe voor iedere window van een set.
-        else:
-            dict_sum['Label'].append(0)
-
     df_sum = pd.DataFrame(data=dict_sum)  # Deze aan het einde, na het berekenen van alle features
 
     # Het combineren van oog features links en rechts en het verwijderen van links en rechts apart
@@ -213,10 +206,10 @@ for idp, p in enumerate(files):
                            'EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std', 'EyeRotationLeft_X_std',
                            'EyeRotationRight_X_std', 'EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std'], axis=1)
 
-    if df3['PrevSceneName'][2] == 'Stress':
-        labels.append(1)
-    else:
-        labels.append(0)
-
     dict_all_files[f"{idp}"] = df_sum2
-    
+
+dict = pd.concat(dict_all_files, ignore_index=True)
+
+dict.to_csv('F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/rust_data_gecombineerd.csv')
+
+print('done')
