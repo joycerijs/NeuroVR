@@ -203,7 +203,6 @@ for idp, p in enumerate(files):
     # Remove last rows where time = zero and for now; remove the rows where head position is 0. Dit kan geskipt voor de echte data
     dataframe_ = df[df.Time != 0.00000]
     dataframe = dataframe_.drop(dataframe_[dataframe_.ExpressionConfidanceUpperFace < 0.2].index)  # Missing data rijen verwijderen. die zijn -1. Misschien reset index?
-    # dataframe = dataframe_[dataframe_.ExpressionConfidanceUpperFace > 0.5]  # Missing data rijen verwijderen. die zijn -1. Misschien reset index?
     df3 = preprocessing(dataframe.reset_index())
 
     # Dataframes van de verschillende stukjes maken
