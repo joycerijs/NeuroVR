@@ -118,7 +118,7 @@ def speed(df, parameter):
     return rf_speeds
 
 
-path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Rust data'
+path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Stress data'
 files = os.listdir(path)
 dict_all_files = {}  # Lege dict om straks alle personen in op te slaan
 labels = []
@@ -126,6 +126,7 @@ labels = []
 for idp, p in enumerate(files):
     # Loop over alle files om dicts te creeren van de features.
     # df = pd.read_table(os.path.join(path, p), delimiter=";", dtype=np.float64)
+    print(idp)
     df = pd.read_table(os.path.join(path, p), delimiter=";", decimal=',')
 
     # Remove last rows where time = zero and for now; remove the rows where head position is 0. Dit kan geskipt voor de echte data
@@ -210,6 +211,6 @@ for idp, p in enumerate(files):
 
 dict = pd.concat(dict_all_files, ignore_index=True)
 
-dict.to_csv('F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/rust_data_gecombineerd.csv')
+dict.to_csv('F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/stress_data_gecombineerd.csv')
 
 print('done')
