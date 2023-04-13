@@ -51,3 +51,21 @@ file_stress = pd.read_table('F:/Documenten/Universiteit/Master_TM+_commissies/Ja
 sign, sign_features_dfs = statistics(file_rest, file_stress, sign_features_dfs)
 
 print(sign_features_dfs)
+
+
+# df = pd.read_table('/media/testdata.csv', delimiter=";", decimal=',')
+
+# list_correct = list(df['CorrectAnswers'])
+# list_wrong = list(df['WrongAnswers'])
+# sum_correct = []
+# sum_wrong = []
+
+# # answers = [1 for i in list(df['CorrectAnswers']) if i < ]
+
+# for i in range(len(list_correct)-1):
+#     if list_correct[i] < list_correct[i+1]:
+#       sum_correct.append(1)
+
+# for i in range(len(list_wrong)-1):
+#     if list_wrong[i] < list_wrong[i+1]:
+#       sum_wrong.append(1)
