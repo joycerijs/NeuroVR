@@ -192,157 +192,159 @@ def mean_ROC_curves(tprs, aucs, axis):
 
 path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Alle data'
 files = os.listdir(path)
-dict_all_files = {}  # Lege dict om straks alle personen in op te slaan
-labels = []
+durations = [30, 60, 90, 180]
 
-for idp, p in enumerate(files):
-    # Loop over alle files om dicts te creeren van de features.
-    # df = pd.read_table(os.path.join(path, p), delimiter=";", dtype=np.float64)
-    df = pd.read_table(os.path.join(path, p), delimiter=";", decimal=',')
+for duration in durations:
+    dict_all_files = {}  # Lege dict om straks alle personen in op te slaan
+    labels = []
+    for idp, p in enumerate(files):
+        # Loop over alle files om dicts te creeren van de features.
+        # df = pd.read_table(os.path.join(path, p), delimiter=";", dtype=np.float64)
+        df = pd.read_table(os.path.join(path, p), delimiter=";", decimal=',')
 
-    # Remove last rows where time = zero and for now; remove the rows where head position is 0. Dit kan geskipt voor de echte data
-    dataframe_ = df[df.Time != 0.00000]
-    dataframe = dataframe_.drop(dataframe_[dataframe_.ExpressionConfidanceUpperFace < 0.2].index)  # Missing data rijen verwijderen. die zijn -1. Misschien reset index?
-    df3 = preprocessing(dataframe.reset_index())
+        # Remove last rows where time = zero and for now; remove the rows where head position is 0. Dit kan geskipt voor de echte data
+        dataframe_ = df[df.Time != 0.00000]
+        dataframe = dataframe_.drop(dataframe_[dataframe_.ExpressionConfidanceUpperFace < 0.2].index)  # Missing data rijen verwijderen. die zijn -1. Misschien reset index?
+        df3 = preprocessing(dataframe.reset_index())
 
-    # Dataframes van de verschillende stukjes maken
-    duration = 30  # Change duration of pieces
-    d = cut_dataframe(df3, idp, duration)
+        # Dataframes van de verschillende stukjes maken
+        # duration = 60  # Change duration of pieces
+        d = cut_dataframe(df3, idp, duration)
 
-    # Keys voor positions
-    positions = ['HeadPosition_X', 'HeadPosition_Y', 'HeadPosition_Z', 'HandPositionRight_X', 'HandPositionRight_Y',
-                 'HandPositionRight_Z']
+        # Keys voor positions
+        positions = ['HeadPosition_X', 'HeadPosition_Y', 'HeadPosition_Z', 'HandPositionRight_X', 'HandPositionRight_Y',
+                    'HandPositionRight_Z']
 
-    # Keys voor rotations
-    rotations = ['HeadRotation_X', 'HeadRotation_Y', 'HeadRotation_Z', 'EyeRotationLeft_X', 'EyeRotationLeft_Y',
-                 'EyeRotationRight_X', 'EyeRotationRight_Y', 'HandRotationRight_X', 'HandRotationRight_Y',
-                 'HandRotationRight_Z']
+        # Keys voor rotations
+        rotations = ['HeadRotation_X', 'HeadRotation_Y', 'HeadRotation_Z', 'EyeRotationLeft_X', 'EyeRotationLeft_Y',
+                    'EyeRotationRight_X', 'EyeRotationRight_Y', 'HandRotationRight_X', 'HandRotationRight_Y',
+                    'HandRotationRight_Z']
 
-    # Keys voor gezichtsfeatures
-    face_features = ['BrowLowererL', 'BrowLowererR', 'CheekPuffL', 'CheekPuffR', 'CheekRaiserL', 'CheekRaiserR',
-                     'CheekSuckL', 'CheekSuckR', 'ChinRaiserB', 'ChinRaiserT', 'DimplerL', 'DimplerR', 'EyesClosedL',
-                     'EyesClosedR', 'EyesLookDownL', 'EyesLookDownR', 'EyesLookLeftL', 'EyesLookLeftR', 'EyesLookRightL',
-                     'EyesLookRightR', 'EyesLookUpL', 'EyesLookUpR', 'InnerBrowRaiserL', 'InnerBrowRaiserR', 'JawDrop',
-                     'JawSidewaysLeft', 'JawSidewaysRight', 'JawThrust', 'LidTightenerL', 'LidTightenerR',
-                     'LipCornerDepressorL', 'LipCornerDepressorR', 'LipCornerPullerL', 'LipCornerPullerR', 'LipFunnelerLB',
-                     'LipFunnelerLT', 'LipFunnelerRB', 'LipFunnelerRT', 'LipPressorL', 'LipPressorR', 'LipPuckerL',
-                     'LipPuckerR', 'LipStretcherL', 'LipStretcherR', 'LipSuckLB', 'LipSuckLT', 'LipSuckRB', 'LipSuckRT',
-                     'LipTightenerL', 'LipTightenerR', 'LipsToward', 'LowerLipDepressorL', 'LowerLipDepressorR',
-                     'MouthLeft', 'MouthRight', 'NoseWrinklerL', 'NoseWrinklerR', 'OuterBrowRaiserL', 'OuterBrowRaiserR',
-                     'UpperLidRaiserL', 'UpperLidRaiserR', 'UpperLipRaiserL', 'UpperLipRaiserR']
+        # Keys voor gezichtsfeatures
+        face_features = ['BrowLowererL', 'BrowLowererR', 'CheekPuffL', 'CheekPuffR', 'CheekRaiserL', 'CheekRaiserR',
+                        'CheekSuckL', 'CheekSuckR', 'ChinRaiserB', 'ChinRaiserT', 'DimplerL', 'DimplerR', 'EyesClosedL',
+                        'EyesClosedR', 'EyesLookDownL', 'EyesLookDownR', 'EyesLookLeftL', 'EyesLookLeftR', 'EyesLookRightL',
+                        'EyesLookRightR', 'EyesLookUpL', 'EyesLookUpR', 'InnerBrowRaiserL', 'InnerBrowRaiserR', 'JawDrop',
+                        'JawSidewaysLeft', 'JawSidewaysRight', 'JawThrust', 'LidTightenerL', 'LidTightenerR',
+                        'LipCornerDepressorL', 'LipCornerDepressorR', 'LipCornerPullerL', 'LipCornerPullerR', 'LipFunnelerLB',
+                        'LipFunnelerLT', 'LipFunnelerRB', 'LipFunnelerRT', 'LipPressorL', 'LipPressorR', 'LipPuckerL',
+                        'LipPuckerR', 'LipStretcherL', 'LipStretcherR', 'LipSuckLB', 'LipSuckLT', 'LipSuckRB', 'LipSuckRT',
+                        'LipTightenerL', 'LipTightenerR', 'LipsToward', 'LowerLipDepressorL', 'LowerLipDepressorR',
+                        'MouthLeft', 'MouthRight', 'NoseWrinklerL', 'NoseWrinklerR', 'OuterBrowRaiserL', 'OuterBrowRaiserR',
+                        'UpperLidRaiserL', 'UpperLidRaiserR', 'UpperLipRaiserL', 'UpperLipRaiserR']
 
-    # Lege dict definiëren
-    dict_sum = defaultdict(list)
+        # Lege dict definiëren
+        dict_sum = defaultdict(list)
 
-    # In deze loop worden voor alle dataframes in de dictionary voor 1 persoon features berekend voor de positions,
-    # rotations en face features.
-    for i in list(d.keys()):
-        for j in range(len(positions)):
-            dict_sum[f"{positions[j]}_std"].append(np.std(d[i][positions[j]]))
-        for k in range(len(rotations)):
-            dict_sum[f"{rotations[k]}_std"].append(np.std(d[i][rotations[k]]))
-            dict_sum[f"{rotations[k]}_speed_mean"].append(mean(speed(d[i], rotations[k])))
-            dict_sum[f"{rotations[k]}_speed_std"].append(np.std(speed(d[i], rotations[k])))
-        for m in range(len(face_features)):
-            dict_sum[f"{face_features[m]}_std"].append(np.std(d[i][face_features[m]]))
-            dict_sum[f"{face_features[m]}_speed_mean"].append(mean(speed(d[i], face_features[m])))
-            dict_sum[f"{face_features[m]}_speed_std"].append(np.std(speed(d[i], face_features[m])))
-        dict_sum["HeadPosition_speed_mean"].append(mean((euclidean_speed(d[i], [positions[0], positions[1],
-                                                                                positions[2]])[0])))
-        dict_sum["HandPosition_speed_mean"].append(mean((euclidean_speed(d[i], [positions[3], positions[4],
-                                                                                positions[5]])[0])))
-        dict_sum["HeadPosition_speed_std"].append(np.std((euclidean_speed(d[i], [positions[0], positions[1],
-                                                                                 positions[2]])[0])))
-        dict_sum["HandPosition_speed_std"].append(np.std((euclidean_speed(d[i], [positions[3], positions[4],
-                                                                                 positions[5]])[0])))
-        dict_sum["HeadPosition_acceleration_mean"].append(mean((euclidean_speed(d[i], [positions[0], positions[1],
-                                                                                       positions[2]])[1])))
-        dict_sum["HandPosition_acceleration_mean"].append(mean((euclidean_speed(d[i], [positions[3], positions[4],
-                                                                                       positions[5]])[1])))
-        dict_sum["HeadPosition_acceleration_std"].append(np.std((euclidean_speed(d[i], [positions[0], positions[1],
+        # In deze loop worden voor alle dataframes in de dictionary voor 1 persoon features berekend voor de positions,
+        # rotations en face features.
+        for i in list(d.keys()):
+            for j in range(len(positions)):
+                dict_sum[f"{positions[j]}_std"].append(np.std(d[i][positions[j]]))
+            for k in range(len(rotations)):
+                dict_sum[f"{rotations[k]}_std"].append(np.std(d[i][rotations[k]]))
+                dict_sum[f"{rotations[k]}_speed_mean"].append(mean(speed(d[i], rotations[k])))
+                dict_sum[f"{rotations[k]}_speed_std"].append(np.std(speed(d[i], rotations[k])))
+            # for m in range(len(face_features)):
+            #     dict_sum[f"{face_features[m]}_std"].append(np.std(d[i][face_features[m]]))
+            #     dict_sum[f"{face_features[m]}_speed_mean"].append(mean(speed(d[i], face_features[m])))
+            #     dict_sum[f"{face_features[m]}_speed_std"].append(np.std(speed(d[i], face_features[m])))
+            dict_sum["HeadPosition_speed_mean"].append(mean((euclidean_speed(d[i], [positions[0], positions[1],
+                                                                                    positions[2]])[0])))
+            dict_sum["HandPosition_speed_mean"].append(mean((euclidean_speed(d[i], [positions[3], positions[4],
+                                                                                    positions[5]])[0])))
+            dict_sum["HeadPosition_speed_std"].append(np.std((euclidean_speed(d[i], [positions[0], positions[1],
+                                                                                    positions[2]])[0])))
+            dict_sum["HandPosition_speed_std"].append(np.std((euclidean_speed(d[i], [positions[3], positions[4],
+                                                                                    positions[5]])[0])))
+            dict_sum["HeadPosition_acceleration_mean"].append(mean((euclidean_speed(d[i], [positions[0], positions[1],
                                                                                         positions[2]])[1])))
-        dict_sum["HandPosition_acceleration_std"].append(np.std((euclidean_speed(d[i], [positions[3], positions[4],
+            dict_sum["HandPosition_acceleration_mean"].append(mean((euclidean_speed(d[i], [positions[3], positions[4],
                                                                                         positions[5]])[1])))
-        dict_sum['Set'].append(idp)  # voeg een kolom toe met de naam van de set (dus het getal van de file (1 t/m 40 ongeveer))
+            dict_sum["HeadPosition_acceleration_std"].append(np.std((euclidean_speed(d[i], [positions[0], positions[1],
+                                                                                            positions[2]])[1])))
+            dict_sum["HandPosition_acceleration_std"].append(np.std((euclidean_speed(d[i], [positions[3], positions[4],
+                                                                                            positions[5]])[1])))
+            dict_sum['Set'].append(idp)  # voeg een kolom toe met de naam van de set (dus het getal van de file (1 t/m 40 ongeveer))
 
+            if df3['PrevSceneName'][2] == 'Stress':
+                dict_sum['Label'].append(1)  # voeg een kolom met het label toe voor iedere window van een set.
+            else:
+                dict_sum['Label'].append(0)
+
+        df_sum = pd.DataFrame(data=dict_sum)  # Deze aan het einde, na het berekenen van alle features
+
+        # Het combineren van oog features links en rechts en het verwijderen van links en rechts apart
+        df_sum['EyeRotationLR_X_speed_mean'] = df_sum[['EyeRotationLeft_X_speed_mean', 'EyeRotationRight_X_speed_mean']].mean(axis=1)
+        df_sum['EyeRotationLR_Y_speed_mean'] = df_sum[['EyeRotationLeft_Y_speed_mean', 'EyeRotationRight_Y_speed_mean']].mean(axis=1)
+        df_sum['EyeRotationLR_X_speed_std'] = df_sum[['EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std']].mean(axis=1)
+        df_sum['EyeRotationLR_Y_speed_std'] = df_sum[['EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std']].mean(axis=1)
+        df_sum['EyeRotationLR_X_std'] = df_sum[['EyeRotationLeft_X_std', 'EyeRotationRight_X_std']].mean(axis=1)
+        df_sum['EyeRotationLR_Y_std'] = df_sum[['EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std']].mean(axis=1)
+        df_sum2 = df_sum.drop(['EyeRotationLeft_X_speed_mean', 'EyeRotationRight_X_speed_mean', 'EyeRotationLeft_Y_speed_mean',
+                            'EyeRotationRight_Y_speed_mean', 'EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std',
+                            'EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std', 'EyeRotationLeft_X_std',
+                            'EyeRotationRight_X_std', 'EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std'], axis=1)
+        # dict_all_files[f"{p}"].append(df_sum2)
+        # dict_all_files[f"Set {idp}"].append(df_sum2)
         if df3['PrevSceneName'][2] == 'Stress':
-            dict_sum['Label'].append(1)  # voeg een kolom met het label toe voor iedere window van een set.
+            labels.append(1)
         else:
-            dict_sum['Label'].append(0)
+            labels.append(0)
 
-    df_sum = pd.DataFrame(data=dict_sum)  # Deze aan het einde, na het berekenen van alle features
+        dict_all_files[f"{idp}"] = df_sum2  # Nog uitzoeken waarom ik dit allebei had
 
-    # Het combineren van oog features links en rechts en het verwijderen van links en rechts apart
-    df_sum['EyeRotationLR_X_speed_mean'] = df_sum[['EyeRotationLeft_X_speed_mean', 'EyeRotationRight_X_speed_mean']].mean(axis=1)
-    df_sum['EyeRotationLR_Y_speed_mean'] = df_sum[['EyeRotationLeft_Y_speed_mean', 'EyeRotationRight_Y_speed_mean']].mean(axis=1)
-    df_sum['EyeRotationLR_X_speed_std'] = df_sum[['EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std']].mean(axis=1)
-    df_sum['EyeRotationLR_Y_speed_std'] = df_sum[['EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std']].mean(axis=1)
-    df_sum['EyeRotationLR_X_std'] = df_sum[['EyeRotationLeft_X_std', 'EyeRotationRight_X_std']].mean(axis=1)
-    df_sum['EyeRotationLR_Y_std'] = df_sum[['EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std']].mean(axis=1)
-    df_sum2 = df_sum.drop(['EyeRotationLeft_X_speed_mean', 'EyeRotationRight_X_speed_mean', 'EyeRotationLeft_Y_speed_mean',
-                           'EyeRotationRight_Y_speed_mean', 'EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std',
-                           'EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std', 'EyeRotationLeft_X_std',
-                           'EyeRotationRight_X_std', 'EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std'], axis=1)
-    # dict_all_files[f"{p}"].append(df_sum2)
-    # dict_all_files[f"Set {idp}"].append(df_sum2)
-    if df3['PrevSceneName'][2] == 'Stress':
-        labels.append(1)
-    else:
-        labels.append(0)
+    # scaled_data = scale_data(df_sum2)
+    cv_10fold = model_selection.StratifiedKFold(n_splits=5)
 
-    dict_all_files[f"{idp}"] = df_sum2  # Nog uitzoeken waarom ik dit allebei had
+    tprs_RF_all = []
+    aucs_RF_all = []
+    spec_RF_all = []
+    sens_RF_all = []
+    accuracy_RF_all = []
+    _, axis_RF_all = plt.subplots()
 
-# scaled_data = scale_data(df_sum2)
-cv_10fold = model_selection.StratifiedKFold(n_splits=5)
+    for i, (train_index, test_index) in enumerate(cv_10fold.split(dict_all_files, labels)):
+        appended_data_train = []
+        appended_data_test = []
 
-tprs_RF_all = []
-aucs_RF_all = []
-spec_RF_all = []
-sens_RF_all = []
-accuracy_RF_all = []
-_, axis_RF_all = plt.subplots()
+        for j in range(len(train_index)):
+            data_train = dict_all_files[(list(dict_all_files.keys()))[(train_index[j])]]
+            appended_data_train.append(data_train)
+        for k in range(len(test_index)):
+            data_test = dict_all_files[(list(dict_all_files.keys()))[(test_index[k])]]
+            appended_data_test.append(data_test)
 
-for i, (train_index, test_index) in enumerate(cv_10fold.split(dict_all_files, labels)):
-    appended_data_train = []
-    appended_data_test = []
+        appended_data_train = pd.concat(appended_data_train, ignore_index=True)
+        appended_data_test = pd.concat(appended_data_test, ignore_index=True)
+        # scaled_train, scaled_test = scale_data(appended_data_train, appended_data_test)
+        # train en test staan nu in aparte dataframes, met labels.
 
-    for j in range(len(train_index)):
-        data_train = dict_all_files[(list(dict_all_files.keys()))[(train_index[j])]]
-        appended_data_train.append(data_train)
-    for k in range(len(test_index)):
-        data_test = dict_all_files[(list(dict_all_files.keys()))[(test_index[k])]]
-        appended_data_test.append(data_test)
+        train_label = list(appended_data_train['Label'])
+        train_data = appended_data_train.drop(['Label', 'Set'], axis=1)
+        test_label = list(appended_data_test['Label'])
+        test_data = appended_data_test.drop(['Label', 'Set'], axis=1)
 
-    appended_data_train = pd.concat(appended_data_train, ignore_index=True)
-    appended_data_test = pd.concat(appended_data_test, ignore_index=True)
-    # scaled_train, scaled_test = scale_data(appended_data_train, appended_data_test)
-    # train en test staan nu in aparte dataframes, met labels.
+        clf_RF_all = RandomForestClassifier()
+        # Random forest with all features: create model
+        tprs_RF_all, aucs_RF_all, spec_RF_all, sens_RF_all, accuracy_RF_all, predicted = pipeline_model(train_data, train_label, test_data, test_label, clf_RF_all, tprs_RF_all, aucs_RF_all, spec_RF_all, sens_RF_all, accuracy_RF_all, axis_RF_all)
 
-    train_label = list(appended_data_train['Label'])
-    train_data = appended_data_train.drop(['Label', 'Set'], axis=1)
-    test_label = list(appended_data_test['Label'])
-    test_data = appended_data_test.drop(['Label', 'Set'], axis=1)
+        # Start aan loopje om per set te berekenen hoeveel windows als stress gelabeld moeten worden.
+        # for m in test_index:
+        #     sum = appended_data_test[appended_data_test['Set'] == m]['Label'].sum()
+        #     dict_predicted = {'Set': list(appended_data_test['Set']), 'Predicted label': predicted}
+        #     df_predicted = pd.DataFrame(data=dict_predicted)
+        #     sum_predicted = df_predicted[df_predicted['Set'] == m]['Predicted label'].sum()
+        #     print(f'sum: {sum}, sum predicted: {sum_predicted}')
 
-    clf_RF_all = RandomForestClassifier()
-    # Random forest with all features: create model
-    tprs_RF_all, aucs_RF_all, spec_RF_all, sens_RF_all, accuracy_RF_all, predicted = pipeline_model(train_data, train_label, test_data, test_label, clf_RF_all, tprs_RF_all, aucs_RF_all, spec_RF_all, sens_RF_all, accuracy_RF_all, axis_RF_all)
+    # mean_ROC_curves(tprs_RF_all, aucs_RF_all, axis_RF_all)
+    # plt.show()
 
-    # Start aan loopje om per set te berekenen hoeveel windows als stress gelabeld moeten worden.
-    for m in test_index:
-        sum = appended_data_test[appended_data_test['Set'] == m]['Label'].sum()
-        dict_predicted = {'Set': list(appended_data_test['Set']), 'Predicted label': predicted}
-        df_predicted = pd.DataFrame(data=dict_predicted)
-        sum_predicted = df_predicted[df_predicted['Set'] == m]['Predicted label'].sum()
-        print(f'sum: {sum}, sum predicted: {sum_predicted}')
+    dict_scores = {'Model 1: RF with all features': [f'{np.round(mean(accuracy_RF_all), decimals=2)} ± {np.round(np.std(accuracy_RF_all), decimals=2)}',
+                                                    f'{np.round(mean(sens_RF_all), decimals=2)} ± {np.round(np.std(sens_RF_all), decimals=2)}',
+                                                    f'{np.round(mean(spec_RF_all), decimals=2)} ± {np.round(np.std(spec_RF_all), decimals=2)}',
+                                                    f'{np.round(mean(aucs_RF_all), decimals=2)} ± {np.round(np.std(aucs_RF_all), decimals=2)}']}
 
-# mean_ROC_curves(tprs_RF_all, aucs_RF_all, axis_RF_all)
-# plt.show()
-
-dict_scores = {'Model 1: RF with all features': [f'{np.round(mean(accuracy_RF_all), decimals=2)} ± {np.round(np.std(accuracy_RF_all), decimals=2)}',
-                                                 f'{np.round(mean(sens_RF_all), decimals=2)} ± {np.round(np.std(sens_RF_all), decimals=2)}',
-                                                 f'{np.round(mean(spec_RF_all), decimals=2)} ± {np.round(np.std(spec_RF_all), decimals=2)}',
-                                                 f'{np.round(mean(aucs_RF_all), decimals=2)} ± {np.round(np.std(aucs_RF_all), decimals=2)}']}
-
-df_scores = pd.DataFrame.from_dict(dict_scores, orient='index', columns=['Accuracy', 'Sensitivity', 'Specificity', 'Area under ROC-curve'])
-
-print(df_scores)
+    df_scores = pd.DataFrame.from_dict(dict_scores, orient='index', columns=['Accuracy', 'Sensitivity', 'Specificity', 'Area under ROC-curve'])
+    print(f'The results for duration {duration}:')
+    print(df_scores)
