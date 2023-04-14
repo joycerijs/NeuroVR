@@ -13,6 +13,7 @@ from sklearn import metrics
 from sklearn.metrics import auc
 from sklearn.metrics import confusion_matrix
 from sklearn.ensemble import RandomForestClassifier
+from scipy.signal import find_peaks
 
 
 def preprocessing(dataframe):
@@ -190,9 +191,9 @@ def mean_ROC_curves(tprs, aucs, axis):
     return
 
 
-path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Alle data'
+path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/data zonder 0'
 files = os.listdir(path)
-durations = [30, 60, 90, 180]
+durations = [30]
 
 for duration in durations:
     dict_all_files = {}  # Lege dict om straks alle personen in op te slaan
@@ -267,6 +268,22 @@ for duration in durations:
                                                                                             positions[5]])[1])))
             dict_sum['Set'].append(idp)  # voeg een kolom toe met de naam van de set (dus het getal van de file (1 t/m 40 ongeveer))
 
+            # Voeg features toe van het aantal goede en foute antwoorden
+            list_correct = list(d[i]['CorrectAnswers'])
+            list_wrong = list(d[i]['WrongAnswers'])
+            sum_correct = []
+            sum_wrong = []
+            for i in range(len(list_correct)-1):
+                if list_correct[i] < list_correct[i+1]:
+                    sum_correct.append(1)
+
+            for i in range(len(list_wrong)-1):
+                if list_wrong[i] < list_wrong[i+1]:
+                    sum_wrong.append(1)
+
+            dict_sum['Wrong_answers'].append(len(sum_wrong))
+            dict_sum['Correct_answers'].append(len(sum_correct))
+
             if df3['PrevSceneName'][2] == 'Stress':
                 dict_sum['Label'].append(1)  # voeg een kolom met het label toe voor iedere window van een set.
             else:
@@ -285,14 +302,13 @@ for duration in durations:
                             'EyeRotationRight_Y_speed_mean', 'EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std',
                             'EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std', 'EyeRotationLeft_X_std',
                             'EyeRotationRight_X_std', 'EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std'], axis=1)
-        # dict_all_files[f"{p}"].append(df_sum2)
-        # dict_all_files[f"Set {idp}"].append(df_sum2)
+
         if df3['PrevSceneName'][2] == 'Stress':
             labels.append(1)
         else:
             labels.append(0)
 
-        dict_all_files[f"{idp}"] = df_sum2  # Nog uitzoeken waarom ik dit allebei had
+        dict_all_files[f"{idp}"] = df_sum2
 
     # scaled_data = scale_data(df_sum2)
     cv_10fold = model_selection.StratifiedKFold(n_splits=5)

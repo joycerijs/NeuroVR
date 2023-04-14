@@ -6,6 +6,7 @@ import os
 from bisect import bisect_left
 from statistics import mean
 from collections import defaultdict
+from scipy.signal import find_peaks
 
 
 def preprocessing(dataframe):
@@ -118,7 +119,7 @@ def speed(df, parameter):
     return rf_speeds
 
 
-path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Stress data'
+path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Rust data zonder 0'
 files = os.listdir(path)
 dict_all_files = {}  # Lege dict om straks alle personen in op te slaan
 labels = []
@@ -167,50 +168,74 @@ for idp, p in enumerate(files):
     # In deze loop worden voor alle dataframes in de dictionary voor 1 persoon features berekend voor de positions,
     # rotations en face features.
     for i in list(d.keys()):
-        for j in range(len(positions)):
-            dict_sum[f"{positions[j]}_std"].append(np.std(d[i][positions[j]]))
-        for k in range(len(rotations)):
-            dict_sum[f"{rotations[k]}_std"].append(np.std(d[i][rotations[k]]))
-            dict_sum[f"{rotations[k]}_speed_mean"].append(mean(speed(d[i], rotations[k])))
-            dict_sum[f"{rotations[k]}_speed_std"].append(np.std(speed(d[i], rotations[k])))
-        for m in range(len(face_features)):
-            dict_sum[f"{face_features[m]}_std"].append(np.std(d[i][face_features[m]]))
-            dict_sum[f"{face_features[m]}_speed_mean"].append(mean(speed(d[i], face_features[m])))
-            dict_sum[f"{face_features[m]}_speed_std"].append(np.std(speed(d[i], face_features[m])))
-        dict_sum["HeadPosition_speed_mean"].append(mean((euclidean_speed(d[i], [positions[0], positions[1],
-                                                                                positions[2]])[0])))
-        dict_sum["HandPosition_speed_mean"].append(mean((euclidean_speed(d[i], [positions[3], positions[4],
-                                                                                positions[5]])[0])))
-        dict_sum["HeadPosition_speed_std"].append(np.std((euclidean_speed(d[i], [positions[0], positions[1],
-                                                                                 positions[2]])[0])))
-        dict_sum["HandPosition_speed_std"].append(np.std((euclidean_speed(d[i], [positions[3], positions[4],
-                                                                                 positions[5]])[0])))
-        dict_sum["HeadPosition_acceleration_mean"].append(mean((euclidean_speed(d[i], [positions[0], positions[1],
-                                                                                       positions[2]])[1])))
-        dict_sum["HandPosition_acceleration_mean"].append(mean((euclidean_speed(d[i], [positions[3], positions[4],
-                                                                                       positions[5]])[1])))
-        dict_sum["HeadPosition_acceleration_std"].append(np.std((euclidean_speed(d[i], [positions[0], positions[1],
-                                                                                        positions[2]])[1])))
-        dict_sum["HandPosition_acceleration_std"].append(np.std((euclidean_speed(d[i], [positions[3], positions[4],
-                                                                                        positions[5]])[1])))
+        # for j in range(len(positions)):
+        #     dict_sum[f"{positions[j]}_std"].append(np.std(d[i][positions[j]]))
+        # for k in range(len(rotations)):
+        #     dict_sum[f"{rotations[k]}_std"].append(np.std(d[i][rotations[k]]))
+        #     dict_sum[f"{rotations[k]}_speed_mean"].append(mean(speed(d[i], rotations[k])))
+        #     dict_sum[f"{rotations[k]}_speed_std"].append(np.std(speed(d[i], rotations[k])))
+        # for m in range(len(face_features)):
+        #     dict_sum[f"{face_features[m]}_std"].append(np.std(d[i][face_features[m]]))
+        #     dict_sum[f"{face_features[m]}_speed_mean"].append(mean(speed(d[i], face_features[m])))
+        #     dict_sum[f"{face_features[m]}_speed_std"].append(np.std(speed(d[i], face_features[m])))
+        # dict_sum["HeadPosition_speed_mean"].append(mean((euclidean_speed(d[i], [positions[0], positions[1],
+        #                                                                         positions[2]])[0])))
+        # dict_sum["HandPosition_speed_mean"].append(mean((euclidean_speed(d[i], [positions[3], positions[4],
+        #                                                                         positions[5]])[0])))
+        # dict_sum["HeadPosition_speed_std"].append(np.std((euclidean_speed(d[i], [positions[0], positions[1],
+        #                                                                          positions[2]])[0])))
+        # dict_sum["HandPosition_speed_std"].append(np.std((euclidean_speed(d[i], [positions[3], positions[4],
+        #                                                                          positions[5]])[0])))
+        # dict_sum["HeadPosition_acceleration_mean"].append(mean((euclidean_speed(d[i], [positions[0], positions[1],
+        #                                                                                positions[2]])[1])))
+        # dict_sum["HandPosition_acceleration_mean"].append(mean((euclidean_speed(d[i], [positions[3], positions[4],
+        #                                                                                positions[5]])[1])))
+        # dict_sum["HeadPosition_acceleration_std"].append(np.std((euclidean_speed(d[i], [positions[0], positions[1],
+        #                                                                                 positions[2]])[1])))
+        # dict_sum["HandPosition_acceleration_std"].append(np.std((euclidean_speed(d[i], [positions[3], positions[4],
+        #                                                                                 positions[5]])[1])))
+        
+        # # Voeg features toe van het aantal goede en foute antwoorden
+        # list_correct = list(d[i]['CorrectAnswers'])
+        # list_wrong = list(d[i]['WrongAnswers'])
+        # sum_correct = []
+        # sum_wrong = []
+        # for i in range(len(list_correct)-1):
+        #     if list_correct[i] < list_correct[i+1]:
+        #         sum_correct.append(1)
+
+        # for i in range(len(list_wrong)-1):
+        #     if list_wrong[i] < list_wrong[i+1]:
+        #         sum_wrong.append(1)
+
+        # dict_sum['Wrong_answers'].append(len(sum_wrong))
+        # dict_sum['Correct_answers'].append(len(sum_correct))
+
+        # Voeg features toe van het aantal knippers
+        s = d[i]['EyesClosedR']
+        peaks_indices = find_peaks(s, height=0.3)[0]
+        dict_sum['Winks'].append(len(peaks_indices))
+
     df_sum = pd.DataFrame(data=dict_sum)  # Deze aan het einde, na het berekenen van alle features
 
-    # Het combineren van oog features links en rechts en het verwijderen van links en rechts apart
-    df_sum['EyeRotationLR_X_speed_mean'] = df_sum[['EyeRotationLeft_X_speed_mean', 'EyeRotationRight_X_speed_mean']].mean(axis=1)
-    df_sum['EyeRotationLR_Y_speed_mean'] = df_sum[['EyeRotationLeft_Y_speed_mean', 'EyeRotationRight_Y_speed_mean']].mean(axis=1)
-    df_sum['EyeRotationLR_X_speed_std'] = df_sum[['EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std']].mean(axis=1)
-    df_sum['EyeRotationLR_Y_speed_std'] = df_sum[['EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std']].mean(axis=1)
-    df_sum['EyeRotationLR_X_std'] = df_sum[['EyeRotationLeft_X_std', 'EyeRotationRight_X_std']].mean(axis=1)
-    df_sum['EyeRotationLR_Y_std'] = df_sum[['EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std']].mean(axis=1)
-    df_sum2 = df_sum.drop(['EyeRotationLeft_X_speed_mean', 'EyeRotationRight_X_speed_mean', 'EyeRotationLeft_Y_speed_mean',
-                           'EyeRotationRight_Y_speed_mean', 'EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std',
-                           'EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std', 'EyeRotationLeft_X_std',
-                           'EyeRotationRight_X_std', 'EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std'], axis=1)
+    # # Het combineren van oog features links en rechts en het verwijderen van links en rechts apart
+    # df_sum['EyeRotationLR_X_speed_mean'] = df_sum[['EyeRotationLeft_X_speed_mean', 'EyeRotationRight_X_speed_mean']].mean(axis=1)
+    # df_sum['EyeRotationLR_Y_speed_mean'] = df_sum[['EyeRotationLeft_Y_speed_mean', 'EyeRotationRight_Y_speed_mean']].mean(axis=1)
+    # df_sum['EyeRotationLR_X_speed_std'] = df_sum[['EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std']].mean(axis=1)
+    # df_sum['EyeRotationLR_Y_speed_std'] = df_sum[['EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std']].mean(axis=1)
+    # df_sum['EyeRotationLR_X_std'] = df_sum[['EyeRotationLeft_X_std', 'EyeRotationRight_X_std']].mean(axis=1)
+    # df_sum['EyeRotationLR_Y_std'] = df_sum[['EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std']].mean(axis=1)
+    # df_sum2 = df_sum.drop(['EyeRotationLeft_X_speed_mean', 'EyeRotationRight_X_speed_mean', 'EyeRotationLeft_Y_speed_mean',
+    #                        'EyeRotationRight_Y_speed_mean', 'EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std',
+    #                        'EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std', 'EyeRotationLeft_X_std',
+    #                        'EyeRotationRight_X_std', 'EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std'], axis=1)
 
-    dict_all_files[f"{idp}"] = df_sum2
+    dict_all_files[f"{idp}"] = df_sum
 
 dict = pd.concat(dict_all_files, ignore_index=True)
 
-dict.to_csv('F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/stress_data_gecombineerd.csv')
+print(dict)
+
+dict.to_csv('F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/wink_rust.csv')
 
 print('done')
