@@ -119,7 +119,7 @@ def speed(df, parameter):
     return rf_speeds
 
 
-path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Rust data zonder 0'
+path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Rust data'
 files = os.listdir(path)
 dict_all_files = {}  # Lege dict om straks alle personen in op te slaan
 labels = []
@@ -162,6 +162,10 @@ for idp, p in enumerate(files):
                      'MouthLeft', 'MouthRight', 'NoseWrinklerL', 'NoseWrinklerR', 'OuterBrowRaiserL', 'OuterBrowRaiserR',
                      'UpperLidRaiserL', 'UpperLidRaiserR', 'UpperLipRaiserL', 'UpperLipRaiserR']
 
+    symmetry_features = ['BrowLowerer', 'CheekPuff', 'CheekRaiser', 'CheekSuck', 'Dimpler', 'InnerBrowRaiser', 'LidTightener',
+                         'LipCornerDepressor', 'LipCornerPuller', 'LipPressor', 'LipPucker', 'LipStretcher', 'LipTightener',
+                         'LowerLipDepressor', 'NoseWrinkler', 'OuterBrowRaiser', 'UpperLidRaiser', 'UpperLipRaiser']
+    # hier gebleven, nog runnen
     # Lege dict definiëren
     dict_sum = defaultdict(list)
 
@@ -175,6 +179,17 @@ for idp, p in enumerate(files):
         #     dict_sum[f"{rotations[k]}_speed_mean"].append(mean(speed(d[i], rotations[k])))
         #     dict_sum[f"{rotations[k]}_speed_std"].append(np.std(speed(d[i], rotations[k])))
         # for m in range(len(face_features)):
+            # dict_sum[f"{face_features[m]}_std"].append(np.mean(d[i][face_features[m]]))
+            # s = d[i][f"{face_features[m]}"]
+            # peaks_indices = find_peaks(s)[0]
+            # peaks = np.array(list(zip(peaks_indices, s[peaks_indices])))
+            # if list(s[peaks_indices]):
+            #     threshold_peak = 0.7 * max(s[peaks_indices])
+            #     filtered_peaks_indices = [index for index, value in peaks if value > threshold_peak]
+            #     dict_sum[f"{face_features[m]}_f"].append(len(filtered_peaks_indices))
+            # else:
+            #     dict_sum[f"{face_features[m]}_f"].append(0)
+            
         #     dict_sum[f"{face_features[m]}_std"].append(np.std(d[i][face_features[m]]))
         #     dict_sum[f"{face_features[m]}_speed_mean"].append(mean(speed(d[i], face_features[m])))
         #     dict_sum[f"{face_features[m]}_speed_std"].append(np.std(speed(d[i], face_features[m])))
@@ -211,10 +226,31 @@ for idp, p in enumerate(files):
         # dict_sum['Wrong_answers'].append(len(sum_wrong))
         # dict_sum['Correct_answers'].append(len(sum_correct))
 
-        # Voeg features toe van het aantal knippers
-        s = d[i]['EyesClosedR']
-        peaks_indices = find_peaks(s, height=0.3)[0]
-        dict_sum['Winks'].append(len(peaks_indices))
+        # # Voeg features toe van het aantal knippers
+        # s = d[i]['BrowLowererL']
+        # # print(p)
+        # # peaks_indices = find_peaks(s, height=0.5)[0]
+        # # dict_sum['Winks'].append(len(peaks_indices))
+        
+        # # Proberen met een threshold afhankelijk van de data zelf
+        # peaks_indices = find_peaks(s)[0]
+        # peaks = np.array(list(zip(peaks_indices, s[peaks_indices])))
+        # threshold_peak = 0.7 * max(s[peaks_indices])
+        # filtered_peaks_indices = [index for index, value in peaks if value > threshold_peak]
+        # dict_sum['Winks'].append(len(filtered_peaks_indices))
+        # print(len(filtered_peaks_indices))
+
+        # Voeg features toe van eye apertures
+        # d[i]['EyeApertureL'] = d[i]['UpperLidRaiserL'] + d[i]['LidTightenerL']
+        # dict_sum['EyeApertureL_mean'].append(mean(d[i]['EyeApertureL']))
+        # dict_sum['EyeApertureL_std'].append(np.std(d[i]['EyeApertureL']))
+        # d[i]['EyeApertureR'] = d[i]['UpperLidRaiserR'] + d[i]['LidTightenerR']
+        # dict_sum['EyeApertureR_mean'].append(mean(d[i]['EyeApertureR']))
+        # dict_sum['EyeApertureR_std'].append(np.std(d[i]['EyeApertureR']))
+
+        # Voeg symmetry features toe
+        for m in range(len(symmetry_features)):
+            dict_sum[f"{symmetry_features[m]}_stdsym"].append(np.std(list((d[i][f"{symmetry_features[m]}L"] - d[i][f"{symmetry_features[m]}R"]))))
 
     df_sum = pd.DataFrame(data=dict_sum)  # Deze aan het einde, na het berekenen van alle features
 
@@ -236,6 +272,6 @@ dict = pd.concat(dict_all_files, ignore_index=True)
 
 print(dict)
 
-dict.to_csv('F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/wink_rust.csv')
+dict.to_csv('F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Symmetry_std_rust.csv')
 
 print('done')

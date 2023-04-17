@@ -179,21 +179,21 @@ def mean_ROC_curves(tprs, aucs, axis):
     std_auc = np.std(aucs)
     std_tpr = np.std(tprs, axis=0)
     axis.plot(mean_fpr, mean_tpr, color='b', label=r'Mean ROC (AUC = %0.2f $\pm$ %0.2f)' % (mean_auc, std_auc), lw=2, alpha=.8)   # Plot the mean ROC-curve for the corresponding model
-    # axis_all.plot(mean_fpr, mean_tpr, label=fr'Mean ROC model {(i+1)} (AUC = %0.2f $\pm$ %0.2f)' % (mean_auc, std_auc), lw=2, alpha=.8)    # Plot the mean ROC-curve for the corresponding model in another figure
+    axis.plot(mean_fpr, mean_tpr, label=fr'Mean ROC model {(i+1)} (AUC = %0.2f $\pm$ %0.2f)' % (mean_auc, std_auc), lw=2, alpha=.8)    # Plot the mean ROC-curve for the corresponding model in another figure
     tprs_upper = np.minimum(mean_tpr + std_tpr, 1)    # Set the upper value of the true positive rates
     tprs_lower = np.maximum(mean_tpr - std_tpr, 0)    # Set the upper value of the true positive rates
     axis.fill_between(mean_fpr, tprs_lower, tprs_upper, color='grey', alpha=.2, label=r'$\pm$ 1 std. dev.')    # Plot the standard deviations of the ROC-curves
     axis.set(xlim=[-0.05, 1.05], ylim=[-0.05, 1.05], title='ROC-curves model')    # Set axes and title
     axis.legend(loc="lower right")    # Set legend
-    # axis_all.fill_between(mean_fpr, tprs_lower, tprs_upper, alpha=.2, label=r'$\pm$ 1 std. dev.')    # Plot the standard deviations of the ROC-curves in another figure
-    # axis_all.set(xlim=[-0.05, 1.05], ylim=[-0.05, 1.05], title='Mean ROC-curve for the three models')    # Set axes and title
-    # axis_all.legend(loc="lower right")    # Set legend
+    axis.fill_between(mean_fpr, tprs_lower, tprs_upper, alpha=.2, label=r'$\pm$ 1 std. dev.')    # Plot the standard deviations of the ROC-curves in another figure
+    axis.set(xlim=[-0.05, 1.05], ylim=[-0.05, 1.05], title='Mean ROC-curve for the three models')    # Set axes and title
+    axis.legend(loc="lower right")    # Set legend
     return
 
 
 path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/data zonder 0'
 files = os.listdir(path)
-durations = [30]
+durations = [180]
 
 for duration in durations:
     dict_all_files = {}  # Lege dict om straks alle personen in op te slaan
@@ -311,7 +311,7 @@ for duration in durations:
         dict_all_files[f"{idp}"] = df_sum2
 
     # scaled_data = scale_data(df_sum2)
-    cv_10fold = model_selection.StratifiedKFold(n_splits=5)
+    cv_10fold = model_selection.StratifiedKFold(n_splits=18)
 
     tprs_RF_all = []
     aucs_RF_all = []
@@ -353,8 +353,8 @@ for duration in durations:
         #     sum_predicted = df_predicted[df_predicted['Set'] == m]['Predicted label'].sum()
         #     print(f'sum: {sum}, sum predicted: {sum_predicted}')
 
-    # mean_ROC_curves(tprs_RF_all, aucs_RF_all, axis_RF_all)
-    # plt.show()
+    mean_ROC_curves(tprs_RF_all, aucs_RF_all, axis_RF_all)
+    plt.show()
 
     dict_scores = {'Model 1: RF with all features': [f'{np.round(mean(accuracy_RF_all), decimals=2)} ± {np.round(np.std(accuracy_RF_all), decimals=2)}',
                                                     f'{np.round(mean(sens_RF_all), decimals=2)} ± {np.round(np.std(sens_RF_all), decimals=2)}',
