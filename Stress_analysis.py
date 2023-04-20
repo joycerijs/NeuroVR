@@ -448,15 +448,13 @@ for duration in durations:
                  RandomForestClassifier(n_estimators=100)]
 
         num = 0
-        fig = plt.figure()
+        fig = plt.figure(figsize=(24,8*len(clsfs)))
 
         for clf in clsfs:
-            for X, Y in zip(dict_all_files, labels):
-                # Split data in training and testing
-                title = str(type(clf))
-                ax = fig.add_subplot(7, 3, num + 1)
-                plot_learning_curve(clf, title, X, Y, ax, ylim=(0.3, 1.01), cv=cv)
-                num += 1
+            title = str(type(clf))
+            ax = fig.add_subplot(7, 3, num + 1)
+            plot_learning_curve(clf, title, train_data, train_label, ax, ylim=(0.3, 1.01), cv=cv)
+            num += 1
 
         plt.show()
 
