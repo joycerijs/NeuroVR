@@ -62,7 +62,7 @@ def take_closest(myList, myNumber):
         return before
 
 
-def cut_dataframe(dataframe, person, duration_piece=10):
+def cut_dataframe(dataframe, person, duration_piece=180):
     # Create a dictionary for one person with the dataframe cut to pieces
     times = []
     indices = []
@@ -73,13 +73,14 @@ def cut_dataframe(dataframe, person, duration_piece=10):
         if i == 0:
             time = (take_closest(list(dataframe['Time']), (dataframe['Time'][0]+duration_piece)))
             times.append(time)
-        else:
-            time = (take_closest(list(dataframe['Time']), time+duration_piece))
-            # Tijd niet toevoegen als het stukje korter is dan 0.5 x duration piece
-            if time - times[-1] < 0.5*duration_piece:
-                break
-            else:
-                times.append(time)
+        # deze gecomment om alleen de eerste .. seconden van het dataframe te nemen.
+        # else:
+        #     time = (take_closest(list(dataframe['Time']), time+duration_piece))
+        #     # Tijd niet toevoegen als het stukje korter is dan 0.5 x duration piece
+        #     if time - times[-1] < 0.5*duration_piece:
+        #         break
+        #     else:
+        #         times.append(time)
     # Find indices of times
     for j in range(len(times)):
         ind = int(dataframe[dataframe['Time'] == times[j]].index.values)
@@ -165,32 +166,6 @@ def pipeline_model(train_data, train_label, test_data, test_label, clf, tprs, au
     accuracy.append(metrics.accuracy_score(test_label, predicted))    # Append the accuracy to the list
 
     return tprs, aucs, spec, sens, accuracy, predicted
-
-
-def mean_ROC_curves(tprs, aucs, axis):
-    '''With this function, the mean ROC-curves of the models over a 10-cross-validation are plot.
-    The true positive rates, areas under the curve and axes where the mean ROC-curve must be plot
-    are given as input for different models. The figures are filled with the mean and std ROC-curve and
-    can be visualized with plt.show()'''
-    # for i, (tprs, aucs, axis) in enumerate(zip(tprs_all, aucs_all, axis_all)):   # Loop over the tprs, aucs and first three axes for the figures of the three different models.
-    # Calculate means and standard deviations of true positive rate, false positive rate and area under curve
-    mean_tpr = np.mean(tprs, axis=0)
-    mean_tpr[-1] = 1.0
-    mean_fpr = np.linspace(0, 1, 100)
-    mean_auc = metrics.auc(mean_fpr, mean_tpr)
-    std_auc = np.std(aucs)
-    std_tpr = np.std(tprs, axis=0)
-    axis.plot(mean_fpr, mean_tpr, color='b', label=r'Mean ROC (AUC = %0.2f $\pm$ %0.2f)' % (mean_auc, std_auc), lw=2, alpha=.8)   # Plot the mean ROC-curve for the corresponding model
-    axis.plot(mean_fpr, mean_tpr, label=fr'Mean ROC model {(i+1)} (AUC = %0.2f $\pm$ %0.2f)' % (mean_auc, std_auc), lw=2, alpha=.8)    # Plot the mean ROC-curve for the corresponding model in another figure
-    tprs_upper = np.minimum(mean_tpr + std_tpr, 1)    # Set the upper value of the true positive rates
-    tprs_lower = np.maximum(mean_tpr - std_tpr, 0)    # Set the upper value of the true positive rates
-    axis.fill_between(mean_fpr, tprs_lower, tprs_upper, color='grey', alpha=.2, label=r'$\pm$ 1 std. dev.')    # Plot the standard deviations of the ROC-curves
-    axis.set(xlim=[-0.05, 1.05], ylim=[-0.05, 1.05], title='ROC-curves model')    # Set axes and title
-    axis.legend(loc="lower right")    # Set legend
-    axis.fill_between(mean_fpr, tprs_lower, tprs_upper, alpha=.2, label=r'$\pm$ 1 std. dev.')    # Plot the standard deviations of the ROC-curves in another figure
-    axis.set(xlim=[-0.05, 1.05], ylim=[-0.05, 1.05], title='Mean ROC-curve for the three models')    # Set axes and title
-    axis.legend(loc="lower right")    # Set legend
-    return
 
 
 def plot_learning_curve(estimator, title, X, y, axes, ylim=None, cv=None,
@@ -286,7 +261,7 @@ def plot_learning_curve(estimator, title, X, y, axes, ylim=None, cv=None,
 
 path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/data zonder 0'
 files = os.listdir(path)
-durations = [180]
+durations = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 for duration in durations:
     dict_all_files = {}  # Lege dict om straks alle personen in op te slaan
@@ -315,9 +290,9 @@ for duration in durations:
                     'HandRotationRight_Z']
         
         # Keys voor rotations zonder oog
-        rotations = ['HeadRotation_X', 'HeadRotation_Y', 'HeadRotation_Z', 
-                     'HandRotationRight_X', 'HandRotationRight_Y',
-                     'HandRotationRight_Z']
+        # rotations = ['HeadRotation_X', 'HeadRotation_Y', 'HeadRotation_Z',
+        #              'HandRotationRight_X', 'HandRotationRight_Y',
+        #              'HandRotationRight_Z']
 
         # Keys voor gezichtsfeatures
         face_features = ['BrowLowererL', 'BrowLowererR', 'CheekPuffL', 'CheekPuffR', 'CheekRaiserL', 'CheekRaiserR',
@@ -390,23 +365,23 @@ for duration in durations:
         df_sum = pd.DataFrame(data=dict_sum)  # Deze aan het einde, na het berekenen van alle features
 
         # Het combineren van oog features links en rechts en het verwijderen van links en rechts apart
-        # df_sum['EyeRotationLR_X_speed_mean'] = df_sum[['EyeRotationLeft_X_speed_mean', 'EyeRotationRight_X_speed_mean']].mean(axis=1)
-        # df_sum['EyeRotationLR_Y_speed_mean'] = df_sum[['EyeRotationLeft_Y_speed_mean', 'EyeRotationRight_Y_speed_mean']].mean(axis=1)
-        # df_sum['EyeRotationLR_X_speed_std'] = df_sum[['EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std']].mean(axis=1)
-        # df_sum['EyeRotationLR_Y_speed_std'] = df_sum[['EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std']].mean(axis=1)
-        # df_sum['EyeRotationLR_X_std'] = df_sum[['EyeRotationLeft_X_std', 'EyeRotationRight_X_std']].mean(axis=1)
-        # df_sum['EyeRotationLR_Y_std'] = df_sum[['EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std']].mean(axis=1)
-        # df_sum2 = df_sum.drop(['EyeRotationLeft_X_speed_mean', 'EyeRotationRight_X_speed_mean', 'EyeRotationLeft_Y_speed_mean',
-        #                     'EyeRotationRight_Y_speed_mean', 'EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std',
-        #                     'EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std', 'EyeRotationLeft_X_std',
-        #                     'EyeRotationRight_X_std', 'EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std'], axis=1)
+        df_sum['EyeRotationLR_X_speed_mean'] = df_sum[['EyeRotationLeft_X_speed_mean', 'EyeRotationRight_X_speed_mean']].mean(axis=1)
+        df_sum['EyeRotationLR_Y_speed_mean'] = df_sum[['EyeRotationLeft_Y_speed_mean', 'EyeRotationRight_Y_speed_mean']].mean(axis=1)
+        df_sum['EyeRotationLR_X_speed_std'] = df_sum[['EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std']].mean(axis=1)
+        df_sum['EyeRotationLR_Y_speed_std'] = df_sum[['EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std']].mean(axis=1)
+        df_sum['EyeRotationLR_X_std'] = df_sum[['EyeRotationLeft_X_std', 'EyeRotationRight_X_std']].mean(axis=1)
+        df_sum['EyeRotationLR_Y_std'] = df_sum[['EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std']].mean(axis=1)
+        df_sum2 = df_sum.drop(['EyeRotationLeft_X_speed_mean', 'EyeRotationRight_X_speed_mean', 'EyeRotationLeft_Y_speed_mean',
+                            'EyeRotationRight_Y_speed_mean', 'EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std',
+                            'EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std', 'EyeRotationLeft_X_std',
+                            'EyeRotationRight_X_std', 'EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std'], axis=1)
 
         if df3['PrevSceneName'][2] == 'Stress':
             labels.append(1)
         else:
             labels.append(0)
 
-        dict_all_files[f"{idp}"] = df_sum  # was sum 2
+        dict_all_files[f"{idp}"] = df_sum2  # was sum 2
 
     # scaled_data = scale_data(df_sum2)
     cv = model_selection.StratifiedKFold(n_splits=18)
@@ -439,27 +414,26 @@ for duration in durations:
         train_data = appended_data_train.drop(['Label', 'Set'], axis=1)
         test_label = list(appended_data_test['Label'])
         test_data = appended_data_test.drop(['Label', 'Set'], axis=1)
-
-        # clf_RF_all = RandomForestClassifier()
         
-        # Learning curves; hier komt een error. n_estimators=1 skippen.
-        clsfs = [RandomForestClassifier(n_estimators=20),
-                 RandomForestClassifier(n_estimators=50),
-                 RandomForestClassifier(n_estimators=100)]
+        # # Learning curves; hier komt een error. n_estimators=1 skippen.
+        # clsfs = [RandomForestClassifier(n_estimators=20),
+        #          RandomForestClassifier(n_estimators=50),
+        #          RandomForestClassifier(n_estimators=100)]
 
-        num = 0
-        fig = plt.figure(figsize=(24,8*len(clsfs)))
+        # num = 0
+        # fig = plt.figure(figsize=(24,8*len(clsfs)))
 
-        for clf in clsfs:
-            title = str(type(clf))
-            ax = fig.add_subplot(7, 3, num + 1)
-            plot_learning_curve(clf, title, train_data, train_label, ax, ylim=(0.3, 1.01), cv=cv)
-            num += 1
+        # for clf in clsfs:
+        #     title = str(type(clf))
+        #     ax = fig.add_subplot(7, 3, num + 1)
+        #     plot_learning_curve(clf, title, train_data, train_label, ax, ylim=(0.3, 1.01), cv=cv)
+        #     num += 1
 
-        plt.show()
+        # plt.show()
 
         # Random forest with all features: create model
-        # tprs_RF_all, aucs_RF_all, spec_RF_all, sens_RF_all, accuracy_RF_all, predicted = pipeline_model(train_data, train_label, test_data, test_label, clf_RF_all, tprs_RF_all, aucs_RF_all, spec_RF_all, sens_RF_all, accuracy_RF_all, axis_RF_all)
+        clf_RF_all = RandomForestClassifier()
+        tprs_RF_all, aucs_RF_all, spec_RF_all, sens_RF_all, accuracy_RF_all, predicted = pipeline_model(train_data, train_label, test_data, test_label, clf_RF_all, tprs_RF_all, aucs_RF_all, spec_RF_all, sens_RF_all, accuracy_RF_all, axis_RF_all)
 
         # Start aan loopje om per set te berekenen hoeveel windows als stress gelabeld moeten worden.
         # for m in test_index:
@@ -469,14 +443,11 @@ for duration in durations:
         #     sum_predicted = df_predicted[df_predicted['Set'] == m]['Predicted label'].sum()
         #     print(f'sum: {sum}, sum predicted: {sum_predicted}')
 
-    # mean_ROC_curves(tprs_RF_all, aucs_RF_all, axis_RF_all)
-    # plt.show()
+    dict_scores = {'Model 1: RF with all features': [f'{np.round(mean(accuracy_RF_all), decimals=2)} ± {np.round(np.std(accuracy_RF_all), decimals=2)}',
+                                                    f'{np.round(mean(sens_RF_all), decimals=2)} ± {np.round(np.std(sens_RF_all), decimals=2)}',
+                                                    f'{np.round(mean(spec_RF_all), decimals=2)} ± {np.round(np.std(spec_RF_all), decimals=2)}',
+                                                    f'{np.round(mean(aucs_RF_all), decimals=2)} ± {np.round(np.std(aucs_RF_all), decimals=2)}']}
 
-    # dict_scores = {'Model 1: RF with all features': [f'{np.round(mean(accuracy_RF_all), decimals=2)} ± {np.round(np.std(accuracy_RF_all), decimals=2)}',
-    #                                                 f'{np.round(mean(sens_RF_all), decimals=2)} ± {np.round(np.std(sens_RF_all), decimals=2)}',
-    #                                                 f'{np.round(mean(spec_RF_all), decimals=2)} ± {np.round(np.std(spec_RF_all), decimals=2)}',
-    #                                                 f'{np.round(mean(aucs_RF_all), decimals=2)} ± {np.round(np.std(aucs_RF_all), decimals=2)}']}
-
-    # df_scores = pd.DataFrame.from_dict(dict_scores, orient='index', columns=['Accuracy', 'Sensitivity', 'Specificity', 'Area under ROC-curve'])
-    # print(f'The results for duration {duration}:')
-    # print(df_scores)
+    df_scores = pd.DataFrame.from_dict(dict_scores, orient='index', columns=['Accuracy', 'Sensitivity', 'Specificity', 'Area under ROC-curve'])
+    print(f'The results for duration {duration}:')
+    print(df_scores)
