@@ -29,8 +29,6 @@ def statistics(rest_data, stress_data, sign_features_dfs):
     df_p_sorted['Rank'] = range(1, len(df_p_sorted)+1)    # Rank the features
     df_p_sorted['Significance level'] = 0.05  # /(len(df_p_sorted)+1-df_p_sorted['Rank'])    # Calculate the significance level per feature
     df_p_sorted['Significant'] = np.where(df_p_sorted['P-value'] < df_p_sorted['Significance level'], 'Yes', 'No')    # Find which features are significant
-    
-    print(df_p_sorted)
 
     # Create dataframe with significant features only and create table for visualisation
     df_p_sign = df_p_sorted.loc[df_p_sorted['Significant'] == 'Yes']
@@ -38,22 +36,22 @@ def statistics(rest_data, stress_data, sign_features_dfs):
 
     # Append the dataframe with significant features to a list for every fold. In this list, the dataframes for the 10 folds are stored.
     sign_features_dfs.append(df_p_for_table)
+    print(np.round(df_p_for_table['P-value'], decimals=3))
 
     # Create list of significant features that can be used for model creation
     sign = df_p_sign['Features'].tolist()
 
     return sign, sign_features_dfs
 
-
 sign_features_dfs = []
 
-file_rest = pd.read_table('F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Symmetry_std_rust.csv', delimiter=",")
-file_stress = pd.read_table('F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Symmetry_std_stress.csv', delimiter=",")
+file_rest = pd.read_table('F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/rust_data_gecombineerd.csv', delimiter=",")
+file_stress = pd.read_table('F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/stress_data_gecombineerd.csv', delimiter=",")
 
 sign, sign_features_dfs = statistics(file_rest, file_stress, sign_features_dfs)
 
 # print(sign)
-print(sign_features_dfs)
+
 
 
 # df = pd.read_table('/media/testdata.csv', delimiter=";", decimal=',')
