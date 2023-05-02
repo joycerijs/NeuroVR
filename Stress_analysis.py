@@ -18,14 +18,6 @@ from sklearn.model_selection import learning_curve
 
 
 def preprocessing(dataframe):
-    # Voor nu: vervangen rotatiematrices en confidance columns verwijderen.
-
-    # Replace rotation columns of dataframe to center values around 360 or 0. Voor nu alleen de rotatie van de 
-    # rechterhand toegevoegd.
-    # Het lukt nog niet om met een loopje de dataframe te wijzigen omdat hij telkens opnieuw gedefinieerd wordt. 
-    # later nog naar kijken
-    # for key in rotations:
-    #     df2 = dataframe.assign(key=np.unwrap(dataframe[key], period=360))
     df2 = dataframe.assign(HeadRotation_X=np.unwrap(dataframe['HeadRotation_X'], period=360),
                            HeadRotation_Y=np.unwrap(dataframe['HeadRotation_Y'], period=360),
                            HeadRotation_Z=np.unwrap(dataframe['HeadRotation_Z'], period=360),
@@ -39,7 +31,6 @@ def preprocessing(dataframe):
 
     # Remove columns that contain 'confidance'
     preprocessed_dataframe = df2[df2.columns.drop(list(df2.filter(regex='Confidance')))]
-    # preprocessed_dataframe = dataframe[dataframe.columns.drop(list(dataframe.filter(regex='Confidance')))]
     return preprocessed_dataframe
 
 
@@ -91,7 +82,7 @@ def cut_dataframe(dataframe, person, duration_piece=180):
     return d
 
 
-def euclidean_speed(df, parameters):
+def euclidean_speed_acc(df, parameters):
     # For position features
     distances = []
     time_steps = []
@@ -126,18 +117,6 @@ def speed(df, parameter):
         distances.append(dist)
     rf_speeds = [i / j for i, j in zip(distances, time_steps)]
     return rf_speeds
-
-
-def scale_data(data_train, data_test):
-    # scale_data(data_train, data_test)
-    keys = data_train.keys()
-    # Scale the data to 0-1
-    scaler = MinMaxScaler()
-    scale_train = scaler.fit_transform(data_train)
-    data_train.loc[:, (keys)] = scale_train
-    scale_test = scaler.transform(data_test)
-    data_test.loc[:, (keys)] = scale_test
-    return data_train, data_test
 
 
 def pipeline_model(train_data, train_label, test_data, test_label, clf, tprs, aucs, spec, sens, accuracy, axis):
@@ -323,21 +302,21 @@ for duration in durations:
             #     dict_sum[f"{face_features[m]}_std"].append(np.std(d[i][face_features[m]]))
             #     dict_sum[f"{face_features[m]}_speed_mean"].append(mean(speed(d[i], face_features[m])))
             #     dict_sum[f"{face_features[m]}_speed_std"].append(np.std(speed(d[i], face_features[m])))
-            dict_sum["HeadPosition_speed_mean"].append(mean((euclidean_speed(d[i], [positions[0], positions[1],
+            dict_sum["HeadPosition_speed_mean"].append(mean((euclidean_speed_acc(d[i], [positions[0], positions[1],
                                                                                     positions[2]])[0])))
-            dict_sum["HandPosition_speed_mean"].append(mean((euclidean_speed(d[i], [positions[3], positions[4],
+            dict_sum["HandPosition_speed_mean"].append(mean((euclidean_speed_acc(d[i], [positions[3], positions[4],
                                                                                     positions[5]])[0])))
-            dict_sum["HeadPosition_speed_std"].append(np.std((euclidean_speed(d[i], [positions[0], positions[1],
+            dict_sum["HeadPosition_speed_std"].append(np.std((euclidean_speed_acc(d[i], [positions[0], positions[1],
                                                                                     positions[2]])[0])))
-            dict_sum["HandPosition_speed_std"].append(np.std((euclidean_speed(d[i], [positions[3], positions[4],
+            dict_sum["HandPosition_speed_std"].append(np.std((euclidean_speed_acc(d[i], [positions[3], positions[4],
                                                                                     positions[5]])[0])))
-            dict_sum["HeadPosition_acceleration_mean"].append(mean((euclidean_speed(d[i], [positions[0], positions[1],
+            dict_sum["HeadPosition_acceleration_mean"].append(mean((euclidean_speed_acc(d[i], [positions[0], positions[1],
                                                                                         positions[2]])[1])))
-            dict_sum["HandPosition_acceleration_mean"].append(mean((euclidean_speed(d[i], [positions[3], positions[4],
+            dict_sum["HandPosition_acceleration_mean"].append(mean((euclidean_speed_acc(d[i], [positions[3], positions[4],
                                                                                         positions[5]])[1])))
-            dict_sum["HeadPosition_acceleration_std"].append(np.std((euclidean_speed(d[i], [positions[0], positions[1],
+            dict_sum["HeadPosition_acceleration_std"].append(np.std((euclidean_speed_acc(d[i], [positions[0], positions[1],
                                                                                             positions[2]])[1])))
-            dict_sum["HandPosition_acceleration_std"].append(np.std((euclidean_speed(d[i], [positions[3], positions[4],
+            dict_sum["HandPosition_acceleration_std"].append(np.std((euclidean_speed_acc(d[i], [positions[3], positions[4],
                                                                                             positions[5]])[1])))
             dict_sum['Set'].append(idp)  # voeg een kolom toe met de naam van de set (dus het getal van de file (1 t/m 40 ongeveer))
 
@@ -407,9 +386,6 @@ for duration in durations:
 
         appended_data_train = pd.concat(appended_data_train, ignore_index=True)
         appended_data_test = pd.concat(appended_data_test, ignore_index=True)
-        # scaled_train, scaled_test = scale_data(appended_data_train, appended_data_test)
-        # train en test staan nu in aparte dataframes, met labels.
-
         train_label = list(appended_data_train['Label'])
         train_data = appended_data_train.drop(['Label', 'Set'], axis=1)
         test_label = list(appended_data_test['Label'])
