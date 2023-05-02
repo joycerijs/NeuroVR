@@ -15,6 +15,7 @@ y = [0, 0.71, 0.75, 0.8, 0.86, 0.9, 0.94, 0.97, 0.97, 0.97, 0.97, 0.97, 0.96, 0.
 
 fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
+ax.grid()
 ax.set_xlabel("Eerste x-aantal seconden")
 ax.set_ylabel("Score")
 ax.set_title('Model score na x-aantal seconden')
