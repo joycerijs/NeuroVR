@@ -1,4 +1,5 @@
-# Statistiek
+'''Dit Python-bestand kan gebruikt worden om variabelen te berekenen en met een t-toets te toetsen welke variabelen
+significant verschillen tussen de stress- en rustdata.'''
 
 import pandas as pd
 import numpy as np
@@ -252,10 +253,9 @@ def statistics(rest_data, stress_data):
     return df_p_for_table
 
 
-path_rest = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Rust data zonder 0'
-path_stress = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Stress data zonder 0'
+path_rest = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Rust data'
+path_stress = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Stress data'
 feature_dict_rest = feature_dict(path_rest)
 feature_dict_stress = feature_dict(path_stress)
-print(feature_dict_rest)
 sign_features_df = statistics(feature_dict_rest, feature_dict_stress)
 print(sign_features_df)
