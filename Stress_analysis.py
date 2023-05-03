@@ -1,4 +1,6 @@
-# Stress analysis
+'''Dit Python-bestand kan gebruikt worden om variabelen te berekenen en met deze variabelen een machine learning
+model voor stress-detectie te trainen en te testen. Ook kunnen in dit bestand leercurves worden gemaakt, en de
+verschillende sub-analyses beschreven in het eindrapport (sectie 3.2.4) kunnen worden uitgevoerd.'''
 
 import pandas as pd
 import numpy as np
@@ -6,18 +8,18 @@ import os
 from bisect import bisect_left
 from statistics import mean
 from collections import defaultdict
-from sklearn.preprocessing import MinMaxScaler
 from sklearn import model_selection
 import matplotlib.pyplot as plt
 from sklearn import metrics
-from sklearn.metrics import auc
 from sklearn.metrics import confusion_matrix
 from sklearn.ensemble import RandomForestClassifier
-from scipy.signal import find_peaks
 from sklearn.model_selection import learning_curve
 
 
 def preprocessing(dataframe):
+    '''In deze functie worden de rotatieparameters genormaliseerd rond 360 graden.
+    Ook worden de parameters verwijderd waar 'Confidance' wordt genoemd, deze worden niet gebruikt bij de
+    data-verwerking. De input van deze functie is een dataframe, de output is de voorbewerkte dataframe.'''
     df2 = dataframe.assign(HeadRotation_X=np.unwrap(dataframe['HeadRotation_X'], period=360),
                            HeadRotation_Y=np.unwrap(dataframe['HeadRotation_Y'], period=360),
                            HeadRotation_Z=np.unwrap(dataframe['HeadRotation_Z'], period=360),
@@ -28,18 +30,14 @@ def preprocessing(dataframe):
                            HandRotationRight_X=np.unwrap(dataframe['HandRotationRight_X'], period=360),
                            HandRotationRight_Y=np.unwrap(dataframe['HandRotationRight_Y'], period=360),
                            HandRotationRight_Z=np.unwrap(dataframe['HandRotationRight_Z'], period=360))
-
-    # Remove columns that contain 'confidance'
     preprocessed_dataframe = df2[df2.columns.drop(list(df2.filter(regex='Confidance')))]
     return preprocessed_dataframe
 
 
 def take_closest(myList, myNumber):
-    """
-    Assumes myList is sorted. Returns closest value to myNumber.
-    If two numbers are equally close, return the smallest number.
-    This can be used for finding the start and end time of the data pieces.
-    """
+    '''Deze functie kan gebruikt worden om het dichtst bij zijnde getal van een gegeven getal (myNumber)
+    in een list te vinden (myList). Ik gebruik deze functie voor het opdelen van de dataframe in kleinere stukken.
+    De output van deze functie is het dichtstbijzijnde getal in de lijst.'''
     pos = bisect_left(myList, myNumber)
     if pos == 0:
         return myList[0]
@@ -54,36 +52,42 @@ def take_closest(myList, myNumber):
 
 
 def cut_dataframe(dataframe, person, duration_piece=180):
-    # Create a dictionary for one person with the dataframe cut to pieces
+    '''In deze functie kan een dataframe in kleinere stukken worden geknipt voor de sub-analyses. De inputs zijn
+    een dataframe, de code van een persoon en de gewenste tijdsduur van de stukjes. Standaard staat de tijdsduur
+    op drie minuten, de data wordt dan niet in stukken geknipt. De output is een dictionary voor een persoon met
+    de verschillende stukjes erin als dataframe. Het is ook mogelijk om met deze functie de sub-analyse uit te voeren
+    voor het samenvatten van enkel de eerste x-aantal seconden aan data. Het aangegeven stuk moet dan gecomment
+    worden.'''
     times = []
     indices = []
     d = {}
     times.append(dataframe['Time'][0])
-    # Find the start and end times for each piece
+    # Vind de start- en eindtijd van ieder stukje
     for i in range(30):
         if i == 0:
             time = (take_closest(list(dataframe['Time']), (dataframe['Time'][0]+duration_piece)))
             times.append(time)
-        # deze gecomment om alleen de eerste .. seconden van het dataframe te nemen.
-        # else:
-        #     time = (take_closest(list(dataframe['Time']), time+duration_piece))
-        #     # Tijd niet toevoegen als het stukje korter is dan 0.5 x duration piece
-        #     if time - times[-1] < 0.5*duration_piece:
-        #         break
-        #     else:
-        #         times.append(time)
-    # Find indices of times
+        # Om alleen de eerste x-aantal seconden aan data mee te nemen, comment dan het
+        # volgende stuk t/m else: times.append(time).
+        else:
+            time = (take_closest(list(dataframe['Time']), time+duration_piece))
+            # Tijd niet toevoegen als het stukje korter is dan 0.5 x duration piece
+            if time - times[-1] < 0.5*duration_piece:
+                break
+            else:
+                times.append(time)
     for j in range(len(times)):
         ind = int(dataframe[dataframe['Time'] == times[j]].index.values)
         indices.append(ind)
-    # Create a dict of the dataframes of the different pieces
     for i in range(len(indices)-1):
         d[f"dataframe{person}_{i}"] = dataframe.loc[indices[i]:indices[i+1]-1, :]
     return d
 
 
 def euclidean_speed_acc(df, parameters):
-    # For position features
+    '''In deze functie kunnen de snelheid en versnelling van positieparameters kunnen berekend op basis van
+    Euclidische ruimte. De inputs zijn een dataframe en de parameter waarvoor de snelheid en versnelling berekend
+    moet worden. De outputs bestaan uit lists van de snelheden en versnellingen.'''
     distances = []
     time_steps = []
     speed_changes = []
@@ -96,7 +100,6 @@ def euclidean_speed_acc(df, parameters):
         time_steps.append(time_step)
         distances.append(dist)
     p_speeds = [i / j for i, j in zip(distances, time_steps)]
-    # berekenen van de acceleratie op basis van het verschil in snelheid gedeeld door het verschil in tijd (eerder berekende tijdstapjes)
     for j in range(len(p_speeds)-1):
         speed_change = p_speeds[j]-p_speeds[j+1]
         speed_changes.append(speed_change)
@@ -105,7 +108,9 @@ def euclidean_speed_acc(df, parameters):
 
 
 def speed(df, parameter):
-    # For rotations en face features
+    '''In deze functie kan de snelheid van parameters kunnen berekend per dimensie, dus niet Euclidisch.
+    De input zijn een dataframe en de parameter waarvoor de snelheid berekend moet worden. De output
+    bestaat uit een list met snelheden.'''
     distances = []
     time_steps = []
     dataframe = df.reset_index()
@@ -119,62 +124,119 @@ def speed(df, parameter):
     return rf_speeds
 
 
-def pipeline_model(train_data, train_label, test_data, test_label, clf, tprs, aucs, spec, sens, accuracy, axis):
-    '''In this function, a machine learning model is created and tested. Dataframes of the train data, train labels, test data and test labels
-    must be given as input. Also, the classifier must be given as input. Scoring metrics true positives, area under curve, specificity, sensitivity
-    and accuracy must be given as input, these scores are appended every fold and are returned. The axis must also be given in order to plot the ROC curves
-    for the different folds in the right figure.'''
-    # Fit and test the classifier
+def feature_dict(path, duration=180):
+    '''In deze functie worden alle variabelen berekend voor iedere file in het gegeven pad. Alleen de lichaams- en
+    oogparameters worden berekend. De outputs van deze functie zijn een dictionary met daarin de berekende variabelen
+    van iedere file en de bijbehorende labels.'''
+    files = os.listdir(path)
+    dict_all_files = {}  # Lege dict om straks alle personen in op te slaan
+    labels = []
+    for idp, p in enumerate(files):
+        # Loop over alle files om dicts te creeren van de features.
+        df = pd.read_table(os.path.join(path, p), delimiter=";", decimal=',')
+        dataframe = df.drop(df[df.ExpressionConfidanceUpperFace < 0.2].index)  # Missing data rijen verwijderen.
+        df3 = preprocessing(dataframe.reset_index())
+        # Dataframes van de verschillende stukjes maken
+        d = cut_dataframe(df3, idp, duration)
+        positions = ['HeadPosition_X', 'HeadPosition_Y', 'HeadPosition_Z', 'HandPositionRight_X', 'HandPositionRight_Y',
+                     'HandPositionRight_Z']
+        rotations = ['HeadRotation_X', 'HeadRotation_Y', 'HeadRotation_Z', 'EyeRotationLeft_X', 'EyeRotationLeft_Y',
+                     'EyeRotationRight_X', 'EyeRotationRight_Y', 'HandRotationRight_X', 'HandRotationRight_Y',
+                     'HandRotationRight_Z']
+        dict_sum = defaultdict(list)
+        for i in list(d.keys()):
+            for j in range(len(positions)):
+                dict_sum[f"{positions[j]}_std"].append(np.std(d[i][positions[j]]))
+            for k in range(len(rotations)):
+                dict_sum[f"{rotations[k]}_std"].append(np.std(d[i][rotations[k]]))
+                dict_sum[f"{rotations[k]}_speed_mean"].append(mean(speed(d[i], rotations[k])))
+                dict_sum[f"{rotations[k]}_speed_std"].append(np.std(speed(d[i], rotations[k])))
+            dict_sum["HeadPosition_speed_mean"].append(mean((euclidean_speed_acc(d[i], [positions[0], positions[1],
+                                                                                        positions[2]])[0])))
+            dict_sum["HandPosition_speed_mean"].append(mean((euclidean_speed_acc(d[i], [positions[3], positions[4],
+                                                                                        positions[5]])[0])))
+            dict_sum["HeadPosition_speed_std"].append(np.std((euclidean_speed_acc(d[i], [positions[0], positions[1],
+                                                                                         positions[2]])[0])))
+            dict_sum["HandPosition_speed_std"].append(np.std((euclidean_speed_acc(d[i], [positions[3], positions[4],
+                                                                                         positions[5]])[0])))
+            dict_sum["HeadPosition_acceleration_mean"].append(mean((euclidean_speed_acc(d[i], [positions[0],
+                                                                                               positions[1],
+                                                                                               positions[2]])[1])))
+            dict_sum["HandPosition_acceleration_mean"].append(mean((euclidean_speed_acc(d[i], [positions[3],
+                                                                                               positions[4],
+                                                                                               positions[5]])[1])))
+            dict_sum["HeadPosition_acceleration_std"].append(np.std((euclidean_speed_acc(d[i], [positions[0],
+                                                                                                positions[1],
+                                                                                                positions[2]])[1])))
+            dict_sum["HandPosition_acceleration_std"].append(np.std((euclidean_speed_acc(d[i], [positions[3],
+                                                                                                positions[4],
+                                                                                                positions[5]])[1])))
+            dict_sum['Set'].append(idp)  # voeg een kolom toe met de naam van de set (dus het getal van de file)
+            if df3['PrevSceneName'][2] == 'Stress':
+                dict_sum['Label'].append(1)  # voeg een kolom met het label toe voor iedere window van een set.
+            else:
+                dict_sum['Label'].append(0)
+        df_sum = pd.DataFrame(data=dict_sum)
+        # Het combineren van oog features links en rechts en het verwijderen van links en rechts apart
+        df_sum['EyeRotationLR_X_speed_mean'] = df_sum[['EyeRotationLeft_X_speed_mean',
+                                                       'EyeRotationRight_X_speed_mean']].mean(axis=1)
+        df_sum['EyeRotationLR_Y_speed_mean'] = df_sum[['EyeRotationLeft_Y_speed_mean',
+                                                       'EyeRotationRight_Y_speed_mean']].mean(axis=1)
+        df_sum['EyeRotationLR_X_speed_std'] = df_sum[['EyeRotationLeft_X_speed_std',
+                                                      'EyeRotationRight_X_speed_std']].mean(axis=1)
+        df_sum['EyeRotationLR_Y_speed_std'] = df_sum[['EyeRotationLeft_Y_speed_std',
+                                                      'EyeRotationRight_Y_speed_std']].mean(axis=1)
+        df_sum['EyeRotationLR_X_std'] = df_sum[['EyeRotationLeft_X_std', 'EyeRotationRight_X_std']].mean(axis=1)
+        df_sum['EyeRotationLR_Y_std'] = df_sum[['EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std']].mean(axis=1)
+        df_sum2 = df_sum.drop(['EyeRotationLeft_X_speed_mean', 'EyeRotationRight_X_speed_mean',
+                               'EyeRotationLeft_Y_speed_mean', 'EyeRotationRight_Y_speed_mean',
+                               'EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std',
+                               'EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std', 'EyeRotationLeft_X_std',
+                               'EyeRotationRight_X_std', 'EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std'], axis=1)
+        if df3['PrevSceneName'][2] == 'Stress':
+            labels.append(1)
+        else:
+            labels.append(0)
+        dict_all_files[f"{idp}"] = df_sum2
+    return dict_all_files, labels
+
+
+def pipeline_model(train_data, train_label, test_data, test_label, clf, tns, tps, fps, fns, spec, sens, accuracy):
+    '''In deze functie wordt een machine learning model ontwikkeld en getest. Dataframes met de train data, train
+    labels, test data en test labels moeten als input worden gegeven. Metrics terecht-positieven (tp),
+    terecht-negatieven (tn), fout-positieven (fp), fout-negatieven (fn), sensitiviteit, specificiteit en
+    accuraatheid worden als input gegeven, aangevuld bij elke fold van de cross-validatie en als output gegeven.'''
     clf.fit(train_data, train_label)
     predicted = clf.predict(test_data)
-
-    # plot ROC-curve per fold
-    mean_fpr = np.linspace(0, 1, 100)    # Help for plotting the false positive rate
-    viz = metrics.plot_roc_curve(clf, test_data, test_label, name='ROC fold {}'.format(i), alpha=0.3, lw=1, ax=axis)    # Plot the ROC-curve for this fold on the specified axis.
-    interp_tpr = np.interp(mean_fpr, viz.fpr, viz.tpr)    # Interpolate the true positive rate
-    interp_tpr[0] = 0.0    # Set the first value of the interpolated true positive rate to 0.0
-    tprs.append(interp_tpr)   # Append the interpolated true positive rate to the list
-    aucs.append(viz.roc_auc)    # Append the area under the curve to the list
-
-    # Calculate the scoring metrics
-    tn, fp, fn, tp = confusion_matrix(test_label, predicted).ravel()   # Find the true negatives, false positives, false negatives and true positives from the confusion matrix
-    # print(f'tn: {tn}, fp: {fp}, fn: {fn}, tp: {tp}')
-
-    spec.append(tn/(tn+fp))    # Append the specificity to the list
-    sens.append(tp/(tp+fn))    # Append the sensitivity to the list
-    accuracy.append(metrics.accuracy_score(test_label, predicted))    # Append the accuracy to the list
-
-    return tprs, aucs, spec, sens, accuracy, predicted
+    tn, fp, fn, tp = confusion_matrix(test_label, predicted).ravel()
+    tns.append(tn)
+    tps.append(tp)
+    fps.append(fp)
+    fns.append(fn)
+    spec.append(tn/(tn+fp))
+    sens.append(tp/(tp+fn))
+    accuracy.append(metrics.accuracy_score(test_label, predicted))
+    return tns, tps, fps, fns, spec, sens, accuracy
 
 
-def plot_learning_curve(estimator, title, X, y, axes, ylim=None, cv=None,
+def plot_learning_curve(estimator, title, X, y, axes, cv=None,
                         n_jobs=None, train_sizes=np.linspace(.1, 1.0, 5)):
-    """
-    Generate 3 plots: the test and training learning curve, the training
-    samples vs fit times curve, the fit times vs score curve.
+    """ Met deze functie kunnen leercurves worden gemaakt. Deze functie is grotendeels overgenomen van
+    https://scikit-learn.org/0.23/auto_examples/model_selection/plot_learning_curve.html.
+    Dit bijbehorende parameterbeschrijving is overgenomen van deze website:
 
-    Parameters
-    ----------
     estimator : object type that implements the "fit" and "predict" methods
         An object of that type which is cloned for each validation.
-
     title : string
         Title for the chart.
-
     X : array-like, shape (n_samples, n_features)
         Training vector, where n_samples is the number of samples and
         n_features is the number of features.
-
     y : array-like, shape (n_samples) or (n_samples, n_features), optional
         Target relative to X for classification or regression;
         None for unsupervised learning.
-
     axes : array of 3 axes, optional (default=None)
         Axes to use for plotting the curves.
-
-    ylim : tuple, shape (ymin, ymax), optional
-        Defines minimum and maximum yvalues plotted.
-
     cv : int, cross-validation generator or an iterable, optional
         Determines the cross-validation splitting strategy.
         Possible inputs for cv are:
@@ -182,20 +244,16 @@ def plot_learning_curve(estimator, title, X, y, axes, ylim=None, cv=None,
           - integer, to specify the number of folds.
           - :term:`CV splitter`,
           - An iterable yielding (train, test) splits as arrays of indices.
-
         For integer/None inputs, if ``y`` is binary or multiclass,
         :class:`StratifiedKFold` used. If the estimator is not a classifier
         or if ``y`` is neither binary nor multiclass, :class:`KFold` is used.
-
         Refer :ref:`User Guide <cross_validation>` for the various
         cross-validators that can be used here.
-
     n_jobs : int or None, optional (default=None)
         Number of jobs to run in parallel.
         ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
         ``-1`` means using all processors. See :term:`Glossary <n_jobs>`
         for more details.
-
     train_sizes : array-like, shape (n_ticks,), dtype float or int
         Relative or absolute numbers of training examples that will be used to
         generate the learning curve. If the dtype is float, it is regarded as a
@@ -206,224 +264,89 @@ def plot_learning_curve(estimator, title, X, y, axes, ylim=None, cv=None,
         be big enough to contain at least one sample from each class.
         (default: np.linspace(0.1, 1.0, 5))
     """
-
+    ylim = (0.3, 1.01)
     axes.set_title(title)
     if ylim is not None:
         axes.set_ylim(*ylim)
-    axes.set_xlabel("Training examples")
+    axes.set_xlabel("Voorbeelden trainset")
     axes.set_ylabel("Score")
-
-    train_sizes, train_scores, test_scores  = \
+    train_sizes, train_scores, test_scores = \
         learning_curve(estimator, X, y, cv=cv, n_jobs=n_jobs,
                        train_sizes=train_sizes)
     train_scores_mean = np.mean(train_scores, axis=1)
-    train_scores_std = np.std(train_scores, axis=1)
     test_scores_mean = np.mean(test_scores, axis=1)
-    test_scores_std = np.std(test_scores, axis=1)
-
-    # Plot learning curve
     axes.grid()
-    axes.fill_between(train_sizes, train_scores_mean - train_scores_std,
-                         train_scores_mean + train_scores_std, alpha=0.1,
-                         color="r")
-    axes.fill_between(train_sizes, test_scores_mean - test_scores_std,
-                         test_scores_mean + test_scores_std, alpha=0.1,
-                         color="g")
+    axes.fill_between(train_sizes, train_scores_mean,
+                      train_scores_mean, alpha=0.1,
+                      color="r")
+    axes.fill_between(train_sizes, test_scores_mean,
+                      test_scores_mean, alpha=0.1,
+                      color="g")
     axes.plot(train_sizes, train_scores_mean, 'o-', color="r",
-                 label="Training score")
+              label="Train score")
     axes.plot(train_sizes, test_scores_mean, 'o-', color="g",
-                 label="Cross-validation score")
+              label="Cross-validatie score")
     axes.legend(loc="best")
-
     return plt
 
 
-path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/data zonder 0'
+path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Data'
 files = os.listdir(path)
-durations = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+durations = [180]  # Vul hier de verschillende tijdstukken in om te testen voor de sub-analyse.
 
 for duration in durations:
-    dict_all_files = {}  # Lege dict om straks alle personen in op te slaan
-    labels = []
-    for idp, p in enumerate(files):
-        # Loop over alle files om dicts te creeren van de features.
-        # df = pd.read_table(os.path.join(path, p), delimiter=";", dtype=np.float64)
-        df = pd.read_table(os.path.join(path, p), delimiter=";", decimal=',')
-
-        # Remove last rows where time = zero and for now; remove the rows where head position is 0. Dit kan geskipt voor de echte data
-        dataframe_ = df[df.Time != 0.00000]
-        dataframe = dataframe_.drop(dataframe_[dataframe_.ExpressionConfidanceUpperFace < 0.2].index)  # Missing data rijen verwijderen. die zijn -1. Misschien reset index?
-        df3 = preprocessing(dataframe.reset_index())
-
-        # Dataframes van de verschillende stukjes maken
-        # duration = 60  # Change duration of pieces
-        d = cut_dataframe(df3, idp, duration)
-
-        # Keys voor positions
-        positions = ['HeadPosition_X', 'HeadPosition_Y', 'HeadPosition_Z', 'HandPositionRight_X', 'HandPositionRight_Y',
-                    'HandPositionRight_Z']
-
-        # Keys voor rotations
-        rotations = ['HeadRotation_X', 'HeadRotation_Y', 'HeadRotation_Z', 'EyeRotationLeft_X', 'EyeRotationLeft_Y',
-                    'EyeRotationRight_X', 'EyeRotationRight_Y', 'HandRotationRight_X', 'HandRotationRight_Y',
-                    'HandRotationRight_Z']
-        
-        # Keys voor rotations zonder oog
-        # rotations = ['HeadRotation_X', 'HeadRotation_Y', 'HeadRotation_Z',
-        #              'HandRotationRight_X', 'HandRotationRight_Y',
-        #              'HandRotationRight_Z']
-
-        # Keys voor gezichtsfeatures
-        face_features = ['BrowLowererL', 'BrowLowererR', 'CheekPuffL', 'CheekPuffR', 'CheekRaiserL', 'CheekRaiserR',
-                        'CheekSuckL', 'CheekSuckR', 'ChinRaiserB', 'ChinRaiserT', 'DimplerL', 'DimplerR', 'EyesClosedL',
-                        'EyesClosedR', 'EyesLookDownL', 'EyesLookDownR', 'EyesLookLeftL', 'EyesLookLeftR', 'EyesLookRightL',
-                        'EyesLookRightR', 'EyesLookUpL', 'EyesLookUpR', 'InnerBrowRaiserL', 'InnerBrowRaiserR', 'JawDrop',
-                        'JawSidewaysLeft', 'JawSidewaysRight', 'JawThrust', 'LidTightenerL', 'LidTightenerR',
-                        'LipCornerDepressorL', 'LipCornerDepressorR', 'LipCornerPullerL', 'LipCornerPullerR', 'LipFunnelerLB',
-                        'LipFunnelerLT', 'LipFunnelerRB', 'LipFunnelerRT', 'LipPressorL', 'LipPressorR', 'LipPuckerL',
-                        'LipPuckerR', 'LipStretcherL', 'LipStretcherR', 'LipSuckLB', 'LipSuckLT', 'LipSuckRB', 'LipSuckRT',
-                        'LipTightenerL', 'LipTightenerR', 'LipsToward', 'LowerLipDepressorL', 'LowerLipDepressorR',
-                        'MouthLeft', 'MouthRight', 'NoseWrinklerL', 'NoseWrinklerR', 'OuterBrowRaiserL', 'OuterBrowRaiserR',
-                        'UpperLidRaiserL', 'UpperLidRaiserR', 'UpperLipRaiserL', 'UpperLipRaiserR']
-
-        # Lege dict definiëren
-        dict_sum = defaultdict(list)
-
-        # In deze loop worden voor alle dataframes in de dictionary voor 1 persoon features berekend voor de positions,
-        # rotations en face features.
-        for i in list(d.keys()):
-            for j in range(len(positions)):
-                dict_sum[f"{positions[j]}_std"].append(np.std(d[i][positions[j]]))
-            for k in range(len(rotations)):
-                dict_sum[f"{rotations[k]}_std"].append(np.std(d[i][rotations[k]]))
-                dict_sum[f"{rotations[k]}_speed_mean"].append(mean(speed(d[i], rotations[k])))
-                dict_sum[f"{rotations[k]}_speed_std"].append(np.std(speed(d[i], rotations[k])))
-            # for m in range(len(face_features)):
-            #     dict_sum[f"{face_features[m]}_std"].append(np.std(d[i][face_features[m]]))
-            #     dict_sum[f"{face_features[m]}_speed_mean"].append(mean(speed(d[i], face_features[m])))
-            #     dict_sum[f"{face_features[m]}_speed_std"].append(np.std(speed(d[i], face_features[m])))
-            dict_sum["HeadPosition_speed_mean"].append(mean((euclidean_speed_acc(d[i], [positions[0], positions[1],
-                                                                                    positions[2]])[0])))
-            dict_sum["HandPosition_speed_mean"].append(mean((euclidean_speed_acc(d[i], [positions[3], positions[4],
-                                                                                    positions[5]])[0])))
-            dict_sum["HeadPosition_speed_std"].append(np.std((euclidean_speed_acc(d[i], [positions[0], positions[1],
-                                                                                    positions[2]])[0])))
-            dict_sum["HandPosition_speed_std"].append(np.std((euclidean_speed_acc(d[i], [positions[3], positions[4],
-                                                                                    positions[5]])[0])))
-            dict_sum["HeadPosition_acceleration_mean"].append(mean((euclidean_speed_acc(d[i], [positions[0], positions[1],
-                                                                                        positions[2]])[1])))
-            dict_sum["HandPosition_acceleration_mean"].append(mean((euclidean_speed_acc(d[i], [positions[3], positions[4],
-                                                                                        positions[5]])[1])))
-            dict_sum["HeadPosition_acceleration_std"].append(np.std((euclidean_speed_acc(d[i], [positions[0], positions[1],
-                                                                                            positions[2]])[1])))
-            dict_sum["HandPosition_acceleration_std"].append(np.std((euclidean_speed_acc(d[i], [positions[3], positions[4],
-                                                                                            positions[5]])[1])))
-            dict_sum['Set'].append(idp)  # voeg een kolom toe met de naam van de set (dus het getal van de file (1 t/m 40 ongeveer))
-
-            # Voeg features toe van het aantal goede en foute antwoorden
-            list_correct = list(d[i]['CorrectAnswers'])
-            list_wrong = list(d[i]['WrongAnswers'])
-            sum_correct = []
-            sum_wrong = []
-            for i in range(len(list_correct)-1):
-                if list_correct[i] < list_correct[i+1]:
-                    sum_correct.append(1)
-
-            for i in range(len(list_wrong)-1):
-                if list_wrong[i] < list_wrong[i+1]:
-                    sum_wrong.append(1)
-
-            dict_sum['Wrong_answers'].append(len(sum_wrong))
-            dict_sum['Correct_answers'].append(len(sum_correct))
-
-            if df3['PrevSceneName'][2] == 'Stress':
-                dict_sum['Label'].append(1)  # voeg een kolom met het label toe voor iedere window van een set.
-            else:
-                dict_sum['Label'].append(0)
-
-        df_sum = pd.DataFrame(data=dict_sum)  # Deze aan het einde, na het berekenen van alle features
-
-        # Het combineren van oog features links en rechts en het verwijderen van links en rechts apart
-        df_sum['EyeRotationLR_X_speed_mean'] = df_sum[['EyeRotationLeft_X_speed_mean', 'EyeRotationRight_X_speed_mean']].mean(axis=1)
-        df_sum['EyeRotationLR_Y_speed_mean'] = df_sum[['EyeRotationLeft_Y_speed_mean', 'EyeRotationRight_Y_speed_mean']].mean(axis=1)
-        df_sum['EyeRotationLR_X_speed_std'] = df_sum[['EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std']].mean(axis=1)
-        df_sum['EyeRotationLR_Y_speed_std'] = df_sum[['EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std']].mean(axis=1)
-        df_sum['EyeRotationLR_X_std'] = df_sum[['EyeRotationLeft_X_std', 'EyeRotationRight_X_std']].mean(axis=1)
-        df_sum['EyeRotationLR_Y_std'] = df_sum[['EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std']].mean(axis=1)
-        df_sum2 = df_sum.drop(['EyeRotationLeft_X_speed_mean', 'EyeRotationRight_X_speed_mean', 'EyeRotationLeft_Y_speed_mean',
-                            'EyeRotationRight_Y_speed_mean', 'EyeRotationLeft_X_speed_std', 'EyeRotationRight_X_speed_std',
-                            'EyeRotationLeft_Y_speed_std', 'EyeRotationRight_Y_speed_std', 'EyeRotationLeft_X_std',
-                            'EyeRotationRight_X_std', 'EyeRotationLeft_Y_std', 'EyeRotationRight_Y_std'], axis=1)
-
-        if df3['PrevSceneName'][2] == 'Stress':
-            labels.append(1)
-        else:
-            labels.append(0)
-
-        dict_all_files[f"{idp}"] = df_sum2  # was sum 2
-
-    # scaled_data = scale_data(df_sum2)
-    cv = model_selection.StratifiedKFold(n_splits=18)
-
-    tprs_RF_all = []
-    aucs_RF_all = []
-    spec_RF_all = []
-    sens_RF_all = []
-    accuracy_RF_all = []
-    _, axis_RF_all = plt.subplots()
+    dict_all_files, labels = feature_dict(path, duration)
+    cv = model_selection.StratifiedKFold(n_splits=17)
+    tns_RF = []
+    tps_RF = []
+    fns_RF = []
+    fps_RF = []
+    spec_RF = []
+    sens_RF = []
+    accuracy_RF = []
 
     for i, (train_index, test_index) in enumerate(cv.split(dict_all_files, labels)):
         appended_data_train = []
         appended_data_test = []
-        # print(f'This is {i} with train {train_index} and test {test_index}')
-
         for j in range(len(train_index)):
             data_train = dict_all_files[(list(dict_all_files.keys()))[(train_index[j])]]
             appended_data_train.append(data_train)
         for k in range(len(test_index)):
             data_test = dict_all_files[(list(dict_all_files.keys()))[(test_index[k])]]
             appended_data_test.append(data_test)
-
         appended_data_train = pd.concat(appended_data_train, ignore_index=True)
         appended_data_test = pd.concat(appended_data_test, ignore_index=True)
         train_label = list(appended_data_train['Label'])
         train_data = appended_data_train.drop(['Label', 'Set'], axis=1)
         test_label = list(appended_data_test['Label'])
         test_data = appended_data_test.drop(['Label', 'Set'], axis=1)
-        
-        # # Learning curves; hier komt een error. n_estimators=1 skippen.
-        # clsfs = [RandomForestClassifier(n_estimators=20),
-        #          RandomForestClassifier(n_estimators=50),
-        #          RandomForestClassifier(n_estimators=100)]
 
-        # num = 0
-        # fig = plt.figure(figsize=(24,8*len(clsfs)))
+        # Creeer Random Forest model
+        clf_RF = RandomForestClassifier()
+        tns_RF, tps_RF, fps_RF, fns_RF, spec_RF, sens_RF, accuracy_RF = \
+            pipeline_model(train_data, train_label, test_data, test_label, clf_RF, tns_RF, tps_RF, fps_RF, fns_RF,
+                           spec_RF, sens_RF, accuracy_RF)
 
-        # for clf in clsfs:
-        #     title = str(type(clf))
-        #     ax = fig.add_subplot(7, 3, num + 1)
-        #     plot_learning_curve(clf, title, train_data, train_label, ax, ylim=(0.3, 1.01), cv=cv)
-        #     num += 1
+    dict_scores = {'Model scores RF': [np.round(mean(accuracy_RF), decimals=2),
+                                       np.round(mean(sens_RF), decimals=2),
+                                       np.round(mean(spec_RF), decimals=2),
+                                       sum(tns_RF), sum(tps_RF), sum(fps_RF), sum(fns_RF)]}
 
-        # plt.show()
-
-        # Random forest with all features: create model
-        clf_RF_all = RandomForestClassifier()
-        tprs_RF_all, aucs_RF_all, spec_RF_all, sens_RF_all, accuracy_RF_all, predicted = pipeline_model(train_data, train_label, test_data, test_label, clf_RF_all, tprs_RF_all, aucs_RF_all, spec_RF_all, sens_RF_all, accuracy_RF_all, axis_RF_all)
-
-        # Start aan loopje om per set te berekenen hoeveel windows als stress gelabeld moeten worden.
-        # for m in test_index:
-        #     sum = appended_data_test[appended_data_test['Set'] == m]['Label'].sum()
-        #     dict_predicted = {'Set': list(appended_data_test['Set']), 'Predicted label': predicted}
-        #     df_predicted = pd.DataFrame(data=dict_predicted)
-        #     sum_predicted = df_predicted[df_predicted['Set'] == m]['Predicted label'].sum()
-        #     print(f'sum: {sum}, sum predicted: {sum_predicted}')
-
-    dict_scores = {'Model 1: RF with all features': [f'{np.round(mean(accuracy_RF_all), decimals=2)} ± {np.round(np.std(accuracy_RF_all), decimals=2)}',
-                                                    f'{np.round(mean(sens_RF_all), decimals=2)} ± {np.round(np.std(sens_RF_all), decimals=2)}',
-                                                    f'{np.round(mean(spec_RF_all), decimals=2)} ± {np.round(np.std(spec_RF_all), decimals=2)}',
-                                                    f'{np.round(mean(aucs_RF_all), decimals=2)} ± {np.round(np.std(aucs_RF_all), decimals=2)}']}
-
-    df_scores = pd.DataFrame.from_dict(dict_scores, orient='index', columns=['Accuracy', 'Sensitivity', 'Specificity', 'Area under ROC-curve'])
-    print(f'The results for duration {duration}:')
+    df_scores = pd.DataFrame.from_dict(dict_scores, orient='index', columns=['Mean accuracy', 'Mean sensitivity',
+                                                                             'Mean specificity', 'True negatives',
+                                                                             'True positives', 'False positives',
+                                                                             'False negatives'])
     print(df_scores)
+
+    # Learning curves: uncomment om deze te plotten
+    # estimators = [50, 100, 150, 200]
+    # num = 0
+    # fig = plt.figure()
+
+    # for estimator in estimators:
+    #     ax = fig.add_subplot(2, 2, num + 1)
+    #     plot_learning_curve(RandomForestClassifier(n_estimators=estimator),
+    #                         f'Leercurve Random Forest n = {estimator}', train_data, train_label, ax, cv)
+    #     num += 1
+    #     print(num)
+    # plt.show()
