@@ -114,7 +114,7 @@ def speed(df, parameter):
     return rf_speeds
 
 
-def feature_dict(path):
+def feature_dict(path, duration=180):
     '''In deze functie worden alle variabelen berekend voor iedere file in het gegeven pad. De output van deze functie
     is een dictionary met daarin de berekende variabelen van iedere file.'''
     files = os.listdir(path)
@@ -126,16 +126,12 @@ def feature_dict(path):
         df3 = preprocessing(dataframe.reset_index())
         # Dataframes van de verschillende stukjes maken. Zo is het mogelijk om over de verschillende stukjes
         # statistiek te berekenen. Ik heb alleen over drie minuten data statistiek berekend.
-        duration = 180
         d = cut_dataframe(df3, idp, duration)
-        # Keys voor positions
         positions = ['HeadPosition_X', 'HeadPosition_Y', 'HeadPosition_Z', 'HandPositionRight_X', 'HandPositionRight_Y',
                      'HandPositionRight_Z']
-        # Keys voor rotations
         rotations = ['HeadRotation_X', 'HeadRotation_Y', 'HeadRotation_Z', 'EyeRotationLeft_X', 'EyeRotationLeft_Y',
                      'EyeRotationRight_X', 'EyeRotationRight_Y', 'HandRotationRight_X', 'HandRotationRight_Y',
                      'HandRotationRight_Z']
-        # Keys voor gezichtsfeatures
         face_features = ['BrowLowererL', 'BrowLowererR', 'CheekPuffL', 'CheekPuffR', 'CheekRaiserL', 'CheekRaiserR',
                          'CheekSuckL', 'CheekSuckR', 'ChinRaiserB', 'ChinRaiserT', 'DimplerL', 'DimplerR',
                          'EyesClosedL', 'EyesClosedR', 'EyesLookDownL', 'EyesLookDownR', 'EyesLookLeftL',
