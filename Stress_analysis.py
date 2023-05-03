@@ -290,7 +290,7 @@ def plot_learning_curve(estimator, title, X, y, axes, cv=None,
     return plt
 
 
-path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Data'
+path = 'F:/Documenten/Universiteit/Master_TM+_commissies/Jaar 3/Neuro VR/Alle data'
 files = os.listdir(path)
 durations = [180]  # Vul hier de verschillende tijdstukken in om te testen voor de sub-analyse.
 

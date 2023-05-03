@@ -5,5 +5,6 @@ significant verschillen tussen de stress- en rustdata.
 Stress_analysis.py bevat de code om data in te laden, variabelen te berekenen en een machine learning model voor stressdetectie
 te trainen en te testen. Ook kunnen in dit bestand leercurves worden gemaakt en de verschillende sub-analyses beschreven in het
 eindrapport (sectie 3.2.4) kunnen worden uitgevoerd.
+Ook zijn er mapjes met data toegevoegd. Er is een mapje met alle data, en twee mapjes met de rust- en stressdata apart.
 
 Voor verdere informatie wordt verwezen naar het bijbehorende eindrapport.
