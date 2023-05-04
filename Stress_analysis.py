@@ -14,6 +14,7 @@ from sklearn import metrics
 from sklearn.metrics import confusion_matrix
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import learning_curve
+import pickle
 
 
 def preprocessing(dataframe):
@@ -201,12 +202,16 @@ def feature_dict(path, duration=180):
     return dict_all_files, labels
 
 
-def pipeline_model(train_data, train_label, test_data, test_label, clf, tns, tps, fps, fns, spec, sens, accuracy):
+def pipeline_model(train_data, train_label, test_data, test_label, clf, tns, tps, fps, fns, spec, sens, accuracy,
+                   filename='model.sav'):
     '''In deze functie wordt een machine learning model ontwikkeld en getest. Dataframes met de train data, train
-    labels, test data en test labels moeten als input worden gegeven. Metrics terecht-positieven (tp),
+    labels, test data en test labels moeten als input worden gegeven. Indien het model opgeslagen moet worden,
+    moet een filename als input worden gegeven. Metrics terecht-positieven (tp),
     terecht-negatieven (tn), fout-positieven (fp), fout-negatieven (fn), sensitiviteit, specificiteit en
     accuraatheid worden als input gegeven, aangevuld bij elke fold van de cross-validatie en als output gegeven.'''
     clf.fit(train_data, train_label)
+    # Uncomment deze om het model op te slaan.
+    # pickle.dump(clf, open(filename, 'wb'))
     predicted = clf.predict(test_data)
     tn, fp, fn, tp = confusion_matrix(test_label, predicted).ravel()
     tns.append(tn)
